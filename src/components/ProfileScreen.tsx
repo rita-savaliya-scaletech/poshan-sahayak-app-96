@@ -17,10 +17,10 @@ const ProfileScreen = () => {
     school: 'Government Primary School, Sector 15',
     district: 'Gandhinagar',
     state: 'Gujarat',
-    language: i18n.language === 'gu' ? 'ગુજરાતી' : 'English',
+    language: i18n.language === 'gu' ? t('gujarati') : t('english'),
     joinDate: '2023-04-15',
     totalReports: 45,
-    rank: 'Senior Teacher'
+    rank: 'Senior Teacher',
   };
 
   const handleLanguageSwitch = (newLang: string) => {
@@ -32,12 +32,12 @@ const ProfileScreen = () => {
     { icon: Languages, label: t('changeLanguage', 'Change Language'), action: () => setShowLanguageDialog(true) },
     { icon: Bell, label: t('notifications', 'Notifications'), action: () => {} },
     { icon: HelpCircle, label: t('helpSupport', 'Help & Support'), action: () => {} },
-    { icon: Settings, label: t('settings', 'Settings'), action: () => {} }
+    { icon: Settings, label: t('settings', 'Settings'), action: () => {} },
   ];
 
   const languages = [
     { code: 'en', name: 'English', nativeName: 'English' },
-    { code: 'gu', name: 'Gujarati', nativeName: 'ગુજરાતી' }
+    { code: 'gu', name: 'Gujarati', nativeName: 'ગુજરાતી' },
   ];
 
   return (
@@ -79,7 +79,9 @@ const ProfileScreen = () => {
               <div className="flex items-center space-x-3">
                 <MapPin className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <p className="font-medium text-foreground">{teacherData.district}, {teacherData.state}</p>
+                  <p className="font-medium text-foreground">
+                    {teacherData.district}, {teacherData.state}
+                  </p>
                   <p className="text-sm text-muted-foreground">Location</p>
                 </div>
               </div>
@@ -137,11 +139,9 @@ const ProfileScreen = () => {
               <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
                 <div className="text-2xl">🇮🇳</div>
               </div>
-              <h4 className="font-bold text-govt-blue text-lg">Government of India</h4>
+              <h4 className="font-bold text-govt-blue text-lg">Government of Gujarat</h4>
             </div>
-            <p className="text-sm text-muted-foreground font-medium">
-              Ministry of Education • Sarva Shiksha Abhiyan
-            </p>
+            <p className="text-sm text-muted-foreground font-medium">Ministry of Education • Sarva Shiksha Abhiyan</p>
             <p className="text-xs text-muted-foreground">
               Member since: {new Date(teacherData.joinDate).toLocaleDateString()}
             </p>
@@ -149,13 +149,13 @@ const ProfileScreen = () => {
         </Card>
 
         {/* Logout Button - Enhanced style */}
-        <Button 
-          variant="outline" 
+        {/* <Button
+          variant="outline"
           className="w-full border-2 border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground rounded-xl py-3 font-semibold shadow-lg"
         >
           <LogOut className="w-5 h-5 mr-2" />
           Sign Out
-        </Button>
+        </Button> */}
       </div>
 
       {/* Language Selection Dialog */}
@@ -179,17 +179,13 @@ const ProfileScreen = () => {
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <div className="text-2xl">
-                    {lang.code === 'en' ? '🇺🇸' : '🇮🇳'}
-                  </div>
+                  <div className="text-2xl">{lang.code === 'en' ? '🇺🇸' : '🇮🇳'}</div>
                   <div className="text-left">
                     <p className="font-semibold">{lang.nativeName}</p>
                     <p className="text-sm text-muted-foreground">{lang.name}</p>
                   </div>
                 </div>
-                {i18n.language === lang.code && (
-                  <Check className="w-5 h-5 text-primary" />
-                )}
+                {i18n.language === lang.code && <Check className="w-5 h-5 text-primary" />}
               </button>
             ))}
           </div>

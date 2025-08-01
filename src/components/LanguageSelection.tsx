@@ -15,19 +15,15 @@ const LanguageSelection = ({ onLanguageSelect }: LanguageSelectionProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-secondary/20 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-accent/20 via-primary/10 to-secondary/15 flex items-center justify-center p-6">
       <Card className="w-full max-w-md p-8 shadow-strong bg-card/95 backdrop-blur-sm">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-primary/10 rounded-2xl mx-auto mb-4 flex items-center justify-center">
             <span className="text-2xl">🌍</span>
           </div>
-          <h2 className="text-2xl font-bold text-foreground mb-2">
-            {t('selectLanguage')}
-          </h2>
-          <p className="text-muted-foreground">
-            Choose your preferred language
-          </p>
+          <h2 className="text-2xl font-bold text-foreground mb-2">{t('selectLanguage')}</h2>
+          <p className="text-muted-foreground">Choose your preferred language</p>
         </div>
 
         {/* Language Options */}
@@ -65,9 +61,7 @@ const LanguageSelection = ({ onLanguageSelect }: LanguageSelectionProps) => {
 
         {/* Footer */}
         <div className="mt-8 pt-6 border-t border-border text-center">
-          <p className="text-xs text-muted-foreground">
-            Government of India • Ministry of Education
-          </p>
+          <p className="text-xs text-muted-foreground">Government of Gujarat • Ministry of Education</p>
         </div>
       </Card>
     </div>

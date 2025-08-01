@@ -11,7 +11,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onComplete();
-    }, 2500);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [onComplete]);
@@ -23,22 +23,20 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         <div className="w-28 h-28 mx-auto bg-white rounded-full shadow-xl flex items-center justify-center border-4 border-primary/20">
           <div className="text-5xl">🌱</div>
         </div>
-        
+
         {/* App Title */}
         <div className="space-y-3">
           <h1 className="text-4xl font-bold text-primary">AI {t('appName')}</h1>
-          <p className="text-lg text-muted-foreground font-medium">
-            Empowering Nutrition. Powered by AI.
-          </p>
+          <p className="text-lg text-muted-foreground font-medium">Empowering Nutrition. Powered by AI.</p>
         </div>
-        
+
         {/* Loading Animation - Matching reference dots style */}
         <div className="flex items-center justify-center space-x-1">
           <div className="w-3 h-3 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
           <div className="w-3 h-3 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
           <div className="w-3 h-3 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
         </div>
-        
+
         {/* Government Branding - Bottom positioning like reference */}
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center text-sm text-muted-foreground">
           <p className="font-medium">Gujarat Education Department</p>
