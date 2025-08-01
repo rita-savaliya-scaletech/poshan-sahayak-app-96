@@ -232,9 +232,31 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
         saveChatSession(updatedSession);
       }
       
-      // Show questionnaire after analysis
+      // Add AI meal menu prompt after analysis
       setTimeout(() => {
-        setShowQuestionnaire(true);
+        setIsTyping(true);
+        
+        setTimeout(() => {
+          setIsTyping(false);
+          
+          const menuPrompt: ChatMessage = {
+            id: `msg_${Date.now()}_menu_prompt`,
+            type: 'system',
+            content: {
+              text: "Here's today's recommended meal menu based on your analysis:",
+              showMenu: true,
+              menu: todaysMenu
+            },
+            timestamp: new Date()
+          };
+          
+          setMessages(prev => [...prev, menuPrompt]);
+          
+          // Show questionnaire after menu
+          setTimeout(() => {
+            setShowQuestionnaire(true);
+          }, 2000);
+        }, 1500);
       }, 1000);
       
       toast.success('Image analysis completed!');
@@ -281,164 +303,47 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   };
 
   const handleQuestionnaireComplete = (data: any) => {
-    // Show typing indicator first
-    setIsTyping(true);
+    const questionnaireMessage: ChatMessage = {
+      id: `msg_${Date.now()}`,
+      type: 'questionnaire',
+      content: data,
+      timestamp: new Date()
+    };
+    const updatedMessages = [...messages, questionnaireMessage];
+    setMessages(updatedMessages);
     
     setTimeout(() => {
-      setIsTyping(false);
-      
-      // Add AI response about starting feedback
-      const feedbackStart: ChatMessage = {
-        id: `msg_${Date.now()}_feedback_start`,
-        type: 'system',
+      const completionMessage: ChatMessage = {
+        id: `msg_${Date.now()}_completion`,
+        type: 'completion',
         content: { 
-          text: 'Great! Now I need to collect some feedback about your meal. This will only take a few minutes. 📝'
+          text: t('feedbackSaved', 'Thank you! Your feedback has been saved successfully. 🙏')
         },
         timestamp: new Date()
       };
+      const finalMessages = [...updatedMessages, completionMessage];
+      setMessages(finalMessages);
+      setShowQuestionnaire(false);
       
-      const updatedMessages = [...messages, feedbackStart];
-      setMessages(updatedMessages);
-      
-      // Start feedback questions in chat
-      setTimeout(() => {
-        setIsTyping(true);
-        
-        setTimeout(() => {
-          setIsTyping(false);
-          
-          const firstQuestion: ChatMessage = {
-            id: `msg_${Date.now()}_q1`,
-            type: 'system',
-            content: { 
-              text: 'Was the meal fresh? 🕐',
-              isQuestion: true,
-              questionType: 'freshness',
-              options: [
-                { value: 'fresh', label: 'Yes, fresh ✅' },
-                { value: 'somewhat', label: 'Somewhat fresh ⚠️' },
-                { value: 'not_fresh', label: 'Not fresh ❌' }
-              ]
-            },
-            timestamp: new Date()
-          };
-          
-          setMessages(prev => [...prev, firstQuestion]);
-        }, 1500);
-      }, 1000);
-    }, 500);
-    
-    setShowQuestionnaire(false);
-  };
-  
-  const handleFeedbackAnswer = (questionType: string, value: string, label: string) => {
-    // Add user's answer
-    const userAnswer: ChatMessage = {
-      id: `msg_${Date.now()}_answer`,
-      type: 'user',
-      content: { text: label },
-      timestamp: new Date()
-    };
-    
-    const updatedMessages = [...messages, userAnswer];
-    setMessages(updatedMessages);
-    
-    // Continue with next question or complete
-    const questionMap = {
-      'freshness': {
-        next: 'quantity',
-        question: 'Was the quantity of food sufficient? 🍽️',
-        options: [
-          { value: 'sufficient', label: 'Sufficient for all ✅' },
-          { value: 'slightly_less', label: 'Slightly less ⚠️' },
-          { value: 'not_enough', label: 'Not enough at all ❌' }
-        ]
-      },
-      'quantity': {
-        next: 'satisfaction',
-        question: 'Were the students satisfied with the meal? 👥',
-        options: [
-          { value: 'happy', label: 'Yes, students were happy 😊' },
-          { value: 'neutral', label: 'Neutral / Mixed reaction 😐' },
-          { value: 'unhappy', label: 'No, students were unhappy 🙁' }
-        ]
-      },
-      'satisfaction': {
-        next: 'comments',
-        question: 'Do you have any additional comments or observations? 💬',
-        isTextInput: true
+      if (currentSession) {
+        const completedSession = {
+          ...currentSession,
+          messages: finalMessages,
+          questionnaireData: data,
+          status: 'completed' as const,
+          completedAt: new Date()
+        };
+        setCurrentSession(completedSession);
+        saveChatSession(completedSession);
       }
-    };
-    
-    setTimeout(() => {
-      setIsTyping(true);
+      
+      toast.success('Feedback submitted successfully!');
       
       setTimeout(() => {
-        setIsTyping(false);
-        
-        const nextQ = questionMap[questionType as keyof typeof questionMap];
-        
-        if (nextQ?.next === 'comments') {
-          const commentQuestion: ChatMessage = {
-            id: `msg_${Date.now()}_q_comments`,
-            type: 'system',
-            content: { 
-              text: nextQ.question,
-              isQuestion: true,
-              questionType: 'comments',
-              isTextInput: true
-            },
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, commentQuestion]);
-        } else if (nextQ) {
-          const nextQuestion: ChatMessage = {
-            id: `msg_${Date.now()}_q_next`,
-            type: 'system',
-            content: { 
-              text: nextQ.question,
-              isQuestion: true,
-              questionType: nextQ.next,
-              options: 'options' in nextQ ? nextQ.options : undefined
-            },
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, nextQuestion]);
-        } else {
-          // Complete feedback
-          const completionMessage: ChatMessage = {
-            id: `msg_${Date.now()}_completion`,
-            type: 'completion',
-            content: { 
-              text: 'Thank you! Your feedback has been saved successfully. 🙏'
-            },
-            timestamp: new Date()
-          };
-          
-          const finalMessages = [...updatedMessages, completionMessage];
-          setMessages(finalMessages);
-          
-          if (currentSession) {
-            const completedSession = {
-              ...currentSession,
-              messages: finalMessages,
-              questionnaireData: { questionType, value, label },
-              status: 'completed' as const,
-              completedAt: new Date()
-            };
-            setCurrentSession(completedSession);
-            saveChatSession(completedSession);
-          }
-          
-          toast.success('Feedback submitted successfully!');
-          
-          setTimeout(() => {
-            onNavigateToHistory?.();
-            toast.success(t('redirectingToHistory', 'Redirecting to history dashboard...'));
-          }, 2000);
-        }
-      }, 1500);
-    }, 1000);
+        onNavigateToHistory?.();
+        toast.success(t('redirectingToHistory', 'Redirecting to history dashboard...'));
+      }, 2000);
+    }, 500);
   };
 
   return (
@@ -496,40 +401,21 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                 <div className="message-bubble-ai">
                   <p>{message.content.text || message.content.greeting}</p>
                   
-                  {/* Question Options */}
-                  {message.content.isQuestion && message.content.options && (
-                    <div className="mt-3 space-y-2">
-                      {message.content.options.map((option: any, idx: number) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleFeedbackAnswer(message.content.questionType, option.value, option.label)}
-                          className="block w-full text-left p-2 bg-background/80 hover:bg-background rounded-lg text-sm transition-colors border border-border/50"
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* Text Input for Comments */}
-                  {message.content.isQuestion && message.content.isTextInput && (
-                    <div className="mt-3">
-                      <textarea
-                        placeholder="Type your comments here..."
-                        className="w-full p-2 bg-background/80 rounded-lg text-sm border border-border/50 resize-none"
-                        rows={3}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            const value = (e.target as HTMLTextAreaElement).value;
-                            if (value.trim()) {
-                              handleFeedbackAnswer('comments', value, value);
-                              (e.target as HTMLTextAreaElement).value = '';
-                            }
-                          }
-                        }}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">Press Enter to send</p>
+                  {/* Show Menu */}
+                  {message.content.showMenu && message.content.menu && (
+                    <div className="mt-3 bg-background/80 rounded-lg p-3 border border-border/50">
+                      <h4 className="font-semibold text-sm mb-2">📋 Today's Meal Menu:</h4>
+                      <div className="space-y-2">
+                        {message.content.menu.map((item: MenuItemType, idx: number) => (
+                          <div key={idx} className="flex items-center justify-between text-sm">
+                            <span className="flex items-center">
+                              <span className="mr-2">{item.emoji}</span>
+                              {item.name}
+                            </span>
+                            <span className="text-muted-foreground">{item.quantity}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   
@@ -624,6 +510,15 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
         {/* Typing Indicator */}
         {isTyping && <TypingIndicator />}
 
+        
+        {/* Questionnaire */}
+        {showQuestionnaire && (
+          <div className="flex justify-center">
+            <div className="w-full max-w-md">
+              <MealQuestionnaire onComplete={handleQuestionnaireComplete} />
+            </div>
+          </div>
+        )}
         
         <div ref={messagesEndRef} />
       </div>
