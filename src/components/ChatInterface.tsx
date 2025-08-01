@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Camera, Image, Upload, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Camera, Image, Upload, Paperclip, Smile, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import MealQuestionnaire from './MealQuestionnaire';
 import { useCamera } from '@/hooks/useCamera';
@@ -37,20 +35,24 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const { takePicture, selectFromGallery, requestPermissions } = useCamera();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [showQuestionnaire, setShowQuestionnaire] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [showImageOptions, setShowImageOptions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Get current time-based greeting
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return t('goodMorning');
-    if (hour < 17) return t('goodAfternoon');
-    return t('goodEvening');
+  // Auto-scroll to bottom
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Sample menu data (in real app, this would come from backend)
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping]);
+
+  // Sample menu data
   const todaysMenu: MenuItemType[] = [
     { name: 'Poha', quantity: '1 bowl', emoji: '🍚' },
     { name: 'Banana', quantity: '1 piece', emoji: '🍌' },
@@ -58,44 +60,93 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     { name: 'Jalebi', quantity: '2 pieces', emoji: '🟡' }
   ];
 
-  // Initialize chat with greeting and menu
+  // Simulate WhatsApp-style conversation on load
   useEffect(() => {
     const sessionId = generateSessionId();
     const mealType = getMealTypeFromTime();
-    const mealName = mealType === 'breakfast' ? t('breakfast') : 
-                   mealType === 'lunch' ? t('lunch') : t('dinner');
     
-    const initialMessage: ChatMessage = {
-      id: `msg_${Date.now()}`,
-      type: 'system' as const,
-      content: {
-        greeting: getGreeting(),
-        menu: todaysMenu,
-        meal: mealName
-      },
-      timestamp: new Date()
+    const simulateConversation = async () => {
+      // AI greeting message
+      const greeting: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        type: 'system',
+        content: {
+          text: `Hello! 👋 I'm here to help track your meals today. What did you have for ${mealType}?`
+        },
+        timestamp: new Date()
+      };
+      
+      setMessages([greeting]);
+      
+      // Show typing indicator
+      setTimeout(() => {
+        setIsTyping(true);
+      }, 1000);
+      
+      // User response
+      setTimeout(() => {
+        setIsTyping(false);
+        const userResponse: ChatMessage = {
+          id: `msg_${Date.now()}_1`,
+          type: 'user',
+          content: {
+            text: "I had poha with some jalebi and a glass of milk"
+          },
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, userResponse]);
+      }, 2500);
+      
+      // AI follow-up
+      setTimeout(() => {
+        setIsTyping(true);
+      }, 3000);
+      
+      setTimeout(() => {
+        setIsTyping(false);
+        const aiResponse: ChatMessage = {
+          id: `msg_${Date.now()}_2`,
+          type: 'system',
+          content: {
+            text: "Great! Can you take a photo of your meal so I can analyze the nutritional content? 📸"
+          },
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, aiResponse]);
+      }, 4500);
     };
     
     const newSession: ChatSession = {
       id: sessionId,
-      messages: [initialMessage],
+      messages: [],
       mealType,
       date: new Date().toISOString().split('T')[0],
       status: 'pending',
       createdAt: new Date()
     };
     
-    setMessages([initialMessage]);
     setCurrentSession(newSession);
     saveChatSession(newSession);
-  }, [t]);
+    simulateConversation();
+  }, []);
+
+  // Typing indicator component
+  const TypingIndicator = () => (
+    <div className="flex mb-4">
+      <div className="typing-indicator">
+        <div className="flex items-center space-x-1">
+          <div className="typing-dot w-2 h-2 bg-muted-foreground rounded-full"></div>
+          <div className="typing-dot w-2 h-2 bg-muted-foreground rounded-full"></div>
+          <div className="typing-dot w-2 h-2 bg-muted-foreground rounded-full"></div>
+        </div>
+      </div>
+    </div>
+  );
 
   // Mock AI analysis function
   const analyzeImage = async (imageFile: File): Promise<AnalysisResult> => {
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // Mock analysis result
     return {
       items_food: ["poha", "banana", "milk", "jalebi", "green chili"],
       input_menu: ["poha", "banana", "milk", "jalebi"],
@@ -127,47 +178,54 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const handleImageUpload = async (imageData: string) => {
     setIsAnalyzing(true);
     setImagePreview(imageData);
+    setShowImageOptions(false);
     
-    // Add user message with image preview
+    // Add user message with image
     const userMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
-      type: 'user' as const,
+      type: 'user',
       content: { image: imageData, fileName: 'food-image.jpg' },
       timestamp: new Date()
     };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     
-    // Update session with new message
+    // Update session
     if (currentSession) {
       const updatedSession = { ...currentSession, messages: updatedMessages };
       setCurrentSession(updatedSession);
       saveChatSession(updatedSession);
     }
 
+    // Show typing indicator while analyzing
+    setTimeout(() => {
+      setIsTyping(true);
+    }, 500);
+
     try {
-      // Convert data URL to File for analysis
       const response = await fetch(imageData);
       const blob = await response.blob();
       const file = new File([blob], 'food-image.jpg', { type: 'image/jpeg' });
       
       const result = await analyzeImage(file);
       
+      setIsTyping(false);
+      
       // Add analysis result
       const analysisMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
-        type: 'analysis' as const,
+        type: 'analysis',
         content: result,
         timestamp: new Date()
       };
-      const updatedMessages = [...messages, analysisMessage];
-      setMessages(updatedMessages);
+      const finalMessages = [...updatedMessages, analysisMessage];
+      setMessages(finalMessages);
       
       // Update session with analysis
       if (currentSession) {
         const updatedSession = { 
           ...currentSession, 
-          messages: updatedMessages,
+          messages: finalMessages,
           analysisResult: result
         };
         setCurrentSession(updatedSession);
@@ -181,6 +239,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       
       toast.success('Image analysis completed!');
     } catch (error) {
+      setIsTyping(false);
       toast.error('Failed to analyze image. Please try again.');
     } finally {
       setIsAnalyzing(false);
@@ -211,7 +270,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const handleGallerySelect = async () => {
     const hasPermission = await requestPermissions();
     if (!hasPermission) {
-      // Fallback to file input on web
       fileInputRef.current?.click();
       return;
     }
@@ -223,29 +281,28 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   };
 
   const handleQuestionnaireComplete = (data: any) => {
-    // Add questionnaire response to messages
     const questionnaireMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
-      type: 'questionnaire' as const,
+      type: 'questionnaire',
       content: data,
       timestamp: new Date()
     };
     const updatedMessages = [...messages, questionnaireMessage];
     setMessages(updatedMessages);
     
-    // Add completion message and navigate to history
     setTimeout(() => {
       const completionMessage: ChatMessage = {
         id: `msg_${Date.now()}_completion`,
-        type: 'completion' as const,
-        content: { message: t('feedbackSaved', 'Thank you! Your feedback has been saved successfully.') },
+        type: 'completion',
+        content: { 
+          text: t('feedbackSaved', 'Thank you! Your feedback has been saved successfully. 🙏')
+        },
         timestamp: new Date()
       };
       const finalMessages = [...updatedMessages, completionMessage];
       setMessages(finalMessages);
       setShowQuestionnaire(false);
       
-      // Complete the session
       if (currentSession) {
         const completedSession = {
           ...currentSession,
@@ -260,7 +317,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       
       toast.success('Feedback submitted successfully!');
       
-      // Navigate to history after completion
       setTimeout(() => {
         onNavigateToHistory?.();
         toast.success(t('redirectingToHistory', 'Redirecting to history dashboard...'));
@@ -269,267 +325,234 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-accent/20 via-primary/10 to-secondary/15">
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-4 max-w-4xl mx-auto w-full">
-        {messages.map((message, index) => (
-          <div key={index} className="space-y-3">
-            {message.type === 'system' && (
-              <Card className="p-6 bg-white/95 backdrop-blur-sm shadow-xl border-2 border-primary/20 rounded-2xl">
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                      <div className="text-2xl">👋</div>
-                    </div>
-                    <h3 className="text-xl font-bold text-primary">
-                      {message.content.greeting}!
-                    </h3>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <h4 className="font-bold text-primary text-lg flex items-center">
-                      <div className="w-8 h-8 bg-gradient-to-br from-food-orange to-food-yellow rounded-full flex items-center justify-center mr-3">
-                        <span className="text-sm">🥘</span>
-                      </div>
-                      {t('todaysMenu', { meal: message.content.meal })}
-                    </h4>
-                    <div className="grid grid-cols-1 gap-3">
-                      {message.content.menu.map((item: MenuItemType, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-xl border border-primary/10">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
-                              <span className="text-lg">{item.emoji}</span>
-                            </div>
-                            <div>
-                              <div className="font-semibold text-foreground">{item.name}</div>
-                              <div className="text-sm text-muted-foreground">{item.quantity}</div>
-                            </div>
-                          </div>
-                          <Badge className="bg-primary text-white px-3 py-1 rounded-full">
-                            ✓
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            )}
+    <div className="flex flex-col h-full bg-background">
+      {/* WhatsApp-style Header */}
+      <div className="bg-primary text-primary-foreground p-4 shadow-lg">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-primary-foreground/20 rounded-full flex items-center justify-center">
+            <span className="text-lg">🥗</span>
+          </div>
+          <div>
+            <h1 className="font-semibold">Poshan Tracker</h1>
+            <p className="text-sm opacity-90">Nutrition Assistant</p>
+          </div>
+        </div>
+      </div>
 
+      {/* Chat Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-background to-muted/20">
+        {messages.map((message, index) => (
+          <div key={index}>
             {message.type === 'user' && (
-              <div className="flex justify-end">
-                <Card className="p-4 bg-primary text-primary-foreground max-w-xs rounded-2xl shadow-lg">
-                  <div className="space-y-3">
+              <div className="flex justify-end mb-3">
+                {message.content.image ? (
+                  <div className="message-bubble-user">
                     <img 
                       src={message.content.image} 
-                      alt="Uploaded food"
-                      className="w-full h-32 object-cover rounded-xl"
+                      alt="Food upload"
+                      className="w-48 h-36 object-cover rounded-lg mb-2"
                     />
-                    <p className="text-sm flex items-center">
-                      <span className="mr-2">📸</span>
-                      {message.content.fileName}
-                    </p>
+                    <p className="text-xs opacity-75">📸 Photo</p>
+                    <div className="flex items-center justify-end mt-1 space-x-1">
+                      <span className="text-xs opacity-75">
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <CheckCircle className="w-3 h-3 opacity-75" />
+                    </div>
                   </div>
-                </Card>
+                ) : (
+                  <div className="message-bubble-user">
+                    <p>{message.content.text}</p>
+                    <div className="flex items-center justify-end mt-1 space-x-1">
+                      <span className="text-xs opacity-75">
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <CheckCircle className="w-3 h-3 opacity-75" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(message.type === 'system' || message.type === 'completion') && (
+              <div className="flex justify-start mb-3">
+                <div className="message-bubble-ai">
+                  <p>{message.content.text || message.content.greeting}</p>
+                  <div className="flex items-center justify-start mt-1">
+                    <span className="text-xs text-muted-foreground">
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
 
             {message.type === 'analysis' && (
-              <Card className="p-6 bg-white/95 backdrop-blur-sm shadow-xl border-2 border-success/30 rounded-2xl">
-                <div className="space-y-5">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-success/20 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-6 h-6 text-success" />
-                    </div>
-                    <h4 className="font-bold text-success text-lg">Analysis Complete</h4>
-                  </div>
-
-                  {/* Found Items */}
-                  <div className="p-4 bg-gradient-to-br from-success/10 to-success/5 rounded-xl border border-success/20">
-                    <h5 className="font-semibold text-success flex items-center space-x-2 mb-3">
-                      <span className="text-lg">✅</span>
-                      <span>{t('itemsFound')}</span>
-                    </h5>
-                    <div className="flex flex-wrap gap-2">
-                      {message.content.found_items.map((item: string, idx: number) => (
-                        <Badge key={idx} className="bg-success text-white px-3 py-1 rounded-full">
-                          {item}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Missing Items */}
-                  {message.content.missing_items.length > 0 && (
-                    <div className="p-4 bg-gradient-to-br from-destructive/10 to-destructive/5 rounded-xl border border-destructive/20">
-                      <h5 className="font-semibold text-destructive flex items-center space-x-2 mb-3">
-                        <span className="text-lg">❌</span>
-                        <span>{t('missingItems')}</span>
-                      </h5>
-                      <div className="flex flex-wrap gap-2">
-                        {message.content.missing_items.map((item: string, idx: number) => (
-                          <Badge key={idx} className="bg-destructive text-white px-3 py-1 rounded-full">
+              <div className="flex justify-start mb-3">
+                <div className="message-bubble-ai max-w-[85%]">
+                  <div className="space-y-3">
+                    <p className="font-semibold text-success">✅ Analysis Complete!</p>
+                    
+                    <div className="bg-success/10 p-3 rounded-lg">
+                      <p className="text-sm font-medium text-success mb-2">Items Found:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {message.content.found_items.map((item: string, idx: number) => (
+                          <span key={idx} className="bg-success text-white text-xs px-2 py-1 rounded-full">
                             {item}
-                          </Badge>
+                          </span>
                         ))}
                       </div>
                     </div>
-                  )}
 
-                  {/* Nutrition Info */}
-                  <div className="p-4 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl border border-primary/20">
-                    <h5 className="font-semibold text-primary flex items-center space-x-2 mb-3">
-                      <span className="text-lg">🥗</span>
-                      <span>{t('nutritionInfo')}</span>
-                    </h5>
-                    <div className="space-y-3">
-                      {Object.entries(message.content.nutritions).map(([food, nutrition], idx) => (
-                        <div key={idx} className="p-3 bg-white/80 rounded-lg border border-primary/10">
-                          <h6 className="font-semibold capitalize mb-2 text-primary">{food}</h6>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
+                    {message.content.missing_items.length > 0 && (
+                      <div className="bg-destructive/10 p-3 rounded-lg">
+                        <p className="text-sm font-medium text-destructive mb-2">Missing Items:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {message.content.missing_items.map((item: string, idx: number) => (
+                            <span key={idx} className="bg-destructive text-white text-xs px-2 py-1 rounded-full">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-primary/10 p-3 rounded-lg">
+                      <p className="text-sm font-medium text-primary mb-2">Nutrition Info:</p>
+                      <div className="space-y-2 text-xs">
+                        {Object.entries(message.content.nutritions).map(([food, nutrition], idx) => (
+                          <div key={idx} className="bg-background/80 p-2 rounded">
+                            <p className="font-medium capitalize">{food}</p>
                             {nutrition && typeof nutrition === 'object' && 'calories' in nutrition && nutrition.calories && (
-                              <div>
-                                <span className="text-muted-foreground font-medium">{t('calories')}: </span>
-                                <span className="text-foreground">{String(nutrition.calories)}</span>
-                              </div>
-                            )}
-                            {nutrition && typeof nutrition === 'object' && 'protein' in nutrition && nutrition.protein && (
-                              <div>
-                                <span className="text-muted-foreground font-medium">{t('protein')}: </span>
-                                <span className="text-foreground">{String(nutrition.protein)}</span>
-                              </div>
-                            )}
-                            {nutrition && typeof nutrition === 'object' && 'fat' in nutrition && nutrition.fat && (
-                              <div>
-                                <span className="text-muted-foreground font-medium">{t('fat')}: </span>
-                                <span className="text-foreground">{String(nutrition.fat)}</span>
-                              </div>
-                            )}
-                            {nutrition && typeof nutrition === 'object' && 'carbs' in nutrition && nutrition.carbs && (
-                              <div>
-                                <span className="text-muted-foreground font-medium">{t('carbs')}: </span>
-                                <span className="text-foreground">{String(nutrition.carbs)}</span>
-                              </div>
+                              <p className="text-muted-foreground">📊 {String(nutrition.calories)}</p>
                             )}
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center justify-start mt-2">
+                    <span className="text-xs text-muted-foreground">
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
                 </div>
-              </Card>
+              </div>
             )}
 
             {message.type === 'questionnaire' && (
-              <Card className="p-4 bg-muted/50 border-success/20">
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-5 h-5 text-success" />
-                    <h4 className="font-semibold text-success">{t('feedbackRecorded', 'Feedback Recorded')}</h4>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="font-medium">{t('freshness', 'Freshness')}: </span>
-                      <span className="capitalize">{message.content.freshness}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium">{t('quantity', 'Quantity')}: </span>
-                      <span className="capitalize">{message.content.quantity}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium">{t('satisfaction', 'Satisfaction')}: </span>
-                      <span className="capitalize">{message.content.satisfaction}</span>
+              <div className="flex justify-end mb-3">
+                <div className="message-bubble-user max-w-[80%]">
+                  <div className="space-y-2">
+                    <p className="font-semibold">📝 Feedback Submitted</p>
+                    <div className="space-y-1 text-sm">
+                      <p>Freshness: {message.content.freshness}</p>
+                      <p>Quantity: {message.content.quantity}</p>
+                      <p>Satisfaction: {message.content.satisfaction}</p>
+                      {message.content.comments && (
+                        <p>Comments: {message.content.comments}</p>
+                      )}
                     </div>
                   </div>
-                  {message.content.comments && (
-                    <div>
-                      <span className="font-medium">{t('comments', 'Comments')}: </span>
-                      <p className="text-muted-foreground mt-1">{message.content.comments}</p>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-end mt-1">
+                    <span className="text-xs opacity-75">
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <CheckCircle className="w-3 h-3 opacity-75 ml-1" />
+                  </div>
                 </div>
-              </Card>
-            )}
-
-            {message.type === 'completion' && (
-              <Card className="p-4 bg-success/10 border-success/20 text-center">
-                <div className="flex items-center justify-center space-x-2">
-                  <CheckCircle className="w-6 h-6 text-success" />
-                  <h4 className="font-semibold text-success">{message.content.message}</h4>
-                </div>
-              </Card>
-            )}
-
-            {/* Timestamp */}
-            <div className="flex justify-center">
-              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                <Clock className="w-3 h-3" />
-                <span>{message.timestamp.toLocaleTimeString()}</span>
               </div>
-            </div>
+            )}
           </div>
         ))}
 
-        {/* Analyzing Indicator */}
-        {isAnalyzing && (
-          <Card className="p-4 bg-warning/5 border-warning/20">
-            <div className="flex items-center space-x-3">
-              <div className="animate-spin w-5 h-5 border-2 border-warning border-t-transparent rounded-full"></div>
-              <span className="text-warning font-medium">{t('analyzing')}</span>
-            </div>
-          </Card>
-        )}
+        {/* Typing Indicator */}
+        {isTyping && <TypingIndicator />}
 
         {/* Questionnaire */}
         {showQuestionnaire && (
-          <MealQuestionnaire onComplete={handleQuestionnaireComplete} />
+          <div className="flex justify-center">
+            <div className="w-full max-w-md">
+              <MealQuestionnaire onComplete={handleQuestionnaireComplete} />
+            </div>
+          </div>
         )}
+        
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Upload Controls - Enhanced style */}
-      {!showQuestionnaire && !isAnalyzing && (
-        <div className="p-4 md:p-6 bg-white/95 backdrop-blur-sm border-t border-border/20 max-w-4xl mx-auto w-full">
-          <div className="flex flex-col space-y-3">
-            <p className="text-center text-sm font-medium text-muted-foreground">
-              {t('captureInstructions', 'Take a photo of the meal served today')}
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Button
-                onClick={handleCameraCapture}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 py-3 md:py-4"
-                size="lg"
-              >
-                <Camera className="w-5 h-5 mr-2" />
-                {t('takePhoto')}
-              </Button>
-              <Button
-                onClick={handleGallerySelect}
-                variant="outline"
-                className="border-2 border-primary/20 hover:bg-primary/5 py-3 md:py-4"
-                size="lg"
-              >
-                <Image className="w-5 h-5 mr-2" />
-                {t('selectFromGallery')}
-              </Button>
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                className="border-2 border-primary/20 hover:bg-primary/5 py-3 md:py-4"
-                size="lg"
-              >
-                <Upload className="w-5 h-5 mr-2" />
-                {t('uploadFile')}
-              </Button>
+      {/* WhatsApp-style Input Area */}
+      {!showQuestionnaire && (
+        <div className="bg-background border-t border-border p-4">
+          {showImageOptions && (
+            <div className="mb-4 p-4 bg-card rounded-lg border">
+              <p className="text-sm font-medium mb-3">📸 Add a photo of your meal</p>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  onClick={handleCameraCapture}
+                  variant="outline"
+                  size="sm"
+                  className="flex flex-col items-center p-3 h-auto"
+                >
+                  <Camera className="w-5 h-5 mb-1" />
+                  <span className="text-xs">Camera</span>
+                </Button>
+                <Button
+                  onClick={handleGallerySelect}
+                  variant="outline"
+                  size="sm"
+                  className="flex flex-col items-center p-3 h-auto"
+                >
+                  <Image className="w-5 h-5 mb-1" />
+                  <span className="text-xs">Gallery</span>
+                </Button>
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="outline"
+                  size="sm"
+                  className="flex flex-col items-center p-3 h-auto"
+                >
+                  <Upload className="w-5 h-5 mb-1" />
+                  <span className="text-xs">File</span>
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={() => setShowImageOptions(!showImageOptions)}
+              variant="ghost"
+              size="icon"
+              className="rounded-full text-muted-foreground hover:text-foreground"
+              disabled={isAnalyzing}
+            >
+              <Paperclip className="w-5 h-5" />
+            </Button>
+            
+            <div className="flex-1 bg-muted rounded-full px-4 py-3">
+              <p className="text-sm text-muted-foreground">
+                {isAnalyzing ? 'Analyzing image...' : 'Take a photo to continue...'}
+              </p>
             </div>
             
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full text-muted-foreground"
+              disabled
+            >
+              <Smile className="w-5 h-5" />
+            </Button>
           </div>
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
         </div>
       )}
     </div>

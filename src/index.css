@@ -154,7 +154,29 @@ Soft, friendly, government-approved design with pastel backgrounds.
   }
 }
 
-/* Fade in animation for chat messages */
+/* WhatsApp-style animations */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -166,6 +188,56 @@ Soft, friendly, government-approved design with pastel backgrounds.
   }
 }
 
+@keyframes typing-dots {
+  0%, 20% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+}
+
+/* WhatsApp-style message bubbles */
+.message-bubble-user {
+  @apply bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2 max-w-[80%] ml-auto shadow-sm;
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.message-bubble-ai {
+  @apply bg-card text-card-foreground rounded-2xl rounded-bl-md px-4 py-2 max-w-[80%] mr-auto shadow-sm border border-border/40;
+  animation: slide-in-left 0.3s ease-out;
+}
+
+.typing-indicator {
+  @apply bg-card text-card-foreground rounded-2xl rounded-bl-md px-4 py-3 max-w-[80%] mr-auto shadow-sm border border-border/40;
+}
+
+.typing-dot {
+  animation: typing-dots 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out;
 }
