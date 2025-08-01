@@ -20,6 +20,7 @@ const resources = {
       goodAfternoon: 'Good Afternoon',
       goodEvening: 'Good Evening',
       greetingHelp: "I'm here to help track your meals today.",
+      greetingFull: '{{greeting}}! 👋 {{help}} {{question}} {{meal}}?', // <-- Add this line
 
       // Chat Interface
       todaysMenu: "Today's meal Menu",
@@ -117,6 +118,7 @@ const resources = {
       goodAfternoon: 'શુભ બપોર',
       goodEvening: 'શુભ સાંજ',
       greetingHelp: 'હું આજે તમારા ભોજનને ટ્રેક કરવામાં મદદ કરવા માટે અહીં છું.',
+      greetingFull: '{{greeting}}! 👋 {{help}} {{question}} {{meal}}?', // <-- Add this line
 
       // Chat Interface
       todaysMenu: 'આજનું {{meal}} મેન્યુ',

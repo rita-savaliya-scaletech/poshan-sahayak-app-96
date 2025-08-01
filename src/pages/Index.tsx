@@ -13,12 +13,13 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('chat');
 
   const handleSplashComplete = () => {
-    setAppState('language');
-  };
-
-  const handleLanguageSelect = () => {
+    // setAppState('language');
     setAppState('main');
   };
+
+  /*  const handleLanguageSelect = () => {
+    setAppState('main');
+  }; */
 
   const handleNavigateToHistory = () => {
     setActiveTab('history');
@@ -41,17 +42,15 @@ const Index = () => {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
-  if (appState === 'language') {
+  /* if (appState === 'language') {
     return <LanguageSelection onLanguageSelect={handleLanguageSelect} />;
-  }
+  } */
 
   return (
     <div className="h-screen flex flex-col bg-background min-w-[320px] max-w-[768px] mx-auto">
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
-        {renderContent()}
-      </div>
-      
+      <div className="flex-1 overflow-hidden">{renderContent()}</div>
+
       {/* Bottom Navigation */}
       <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
     </div>

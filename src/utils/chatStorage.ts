@@ -1,6 +1,6 @@
 export interface ChatMessage {
   id: string;
-  type: 'system' | 'user' | 'analysis' | 'questionnaire' | 'completion' | 'feedback_question';
+  type: 'system' | 'user' | 'analysis' | 'questionnaire' | 'completion' | 'feedback_question' | 'menu_card';
   content: any;
   timestamp: Date;
 }
@@ -68,9 +68,14 @@ export const generateSessionId = (): string => {
   return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-export const getMealTypeFromTime = (): 'breakfast' | 'lunch' | 'dinner' => {
-  const hour = new Date().getHours();
-  if (hour < 11) return 'breakfast';
-  if (hour < 16) return 'lunch';
-  return 'dinner';
+export const getMealTypeFromTime = (): 'breakfast' | 'lunch' | null => {
+  const now = new Date();
+  const hour = now.getHours();
+  const minutes = now.getMinutes();
+  const totalMinutes = hour * 60 + minutes;
+
+  if (totalMinutes >= 510 && totalMinutes < 570) return 'breakfast'; // 8:30 – 9:30
+  if (totalMinutes >= 750 && totalMinutes < 810) return 'lunch'; // 12:30 – 1:30
+
+  return null; // Outside of meal time
 };

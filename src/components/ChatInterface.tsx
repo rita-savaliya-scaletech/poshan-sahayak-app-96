@@ -1,44 +1,59 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { Camera, Image, Upload, Paperclip, Smile, CheckCircle } from 'lucide-react';
+import { Camera, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCamera } from '@/hooks/useCamera';
+import Webcam from 'react-webcam';
 import {
   saveChatSession,
-  updateChatSession,
   generateSessionId,
   getMealTypeFromTime,
   type ChatSession,
   type ChatMessage,
 } from '@/utils/chatStorage';
 
-interface MenuItemType {
+// --- Types ---
+export interface MenuItem {
   name: string;
   quantity: string;
   emoji: string;
 }
 
-interface AnalysisResult {
-  items_food: string[];
-  input_menu: string[];
-  found_items: string[];
-  missing_items: string[];
-  nutritions: Record<
-    string,
-    {
-      calories?: string;
-      protein?: string;
-      fat?: string;
-      carbs?: string;
-    }
-  >;
+export interface NutritionInfo {
+  calories?: string;
+  protein?: string;
+  fat?: string;
+  carbs?: string;
+}
+
+export interface AnalysisResult {
+  itemsFood: string[];
+  inputMenu: string[];
+  foundItems: string[];
+  missingItems: string[];
+  nutritions: Record<string, NutritionInfo>;
+}
+
+export interface FeedbackOption {
+  value: string;
+  label: string;
+  icon?: string;
+}
+
+export interface FeedbackQuestion {
+  key: string;
+  text: string;
+  icon?: string;
+  type: 'single' | 'multi';
+  options: FeedbackOption[];
 }
 
 interface ChatInterfaceProps {
   onNavigateToHistory?: () => void;
 }
 
+// --- Hooks ---
 const useMealQuestionnaireQuestions = () => {
   const { t } = useTranslation();
   return [
@@ -50,7 +65,7 @@ const useMealQuestionnaireQuestions = () => {
       options: [
         { value: 'yes', label: t('yes'), icon: '👍' },
         { value: 'no', label: t('no'), icon: '👎' },
-        { value: 'not_sure', label: t('notSure', 'Not sure'), icon: '🤔' },
+        { value: 'not_sure', label: t('notSure'), icon: '🤔' },
       ],
     },
     {
@@ -79,93 +94,109 @@ const useMealQuestionnaireQuestions = () => {
 };
 
 const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
+  const webcamRef = useRef<Webcam>(null);
   const { t } = useTranslation();
-  const { takePicture, selectFromGallery, requestPermissions } = useCamera();
+  const { selectFromGallery, requestPermissions } = useCamera();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [photoAnalyzed, setPhotoAnalyzed] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
-  const [showImageOptions, setShowImageOptions] = useState(false);
+  const [locationName, setLocationName] = useState<string>('');
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showCamera, setShowCamera] = useState(false);
 
-  // Auto-scroll to bottom
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  // Detect location on mount
   useEffect(() => {
-    scrollToBottom();
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          setCoords({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+          });
+          // Reverse geocode
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`
+            );
+            const data = await res.json();
+            setLocationName(data.display_name || '');
+          } catch {
+            setLocationName('');
+          }
+        },
+        () => setLocationName(''),
+        { enableHighAccuracy: true }
+      );
+    }
+  }, []);
+
+  // Memoize menu for performance
+  const todaysMenu = useMemo<MenuItem[]>(
+    () => [
+      { name: t('poha'), quantity: t('oneBowl'), emoji: '🍚' },
+      { name: t('banana'), quantity: t('onePiece'), emoji: '🍌' },
+      { name: t('milk'), quantity: t('oneGlass'), emoji: '🥛' },
+      { name: t('jalebi'), quantity: t('twoPieces'), emoji: '🟡' },
+    ],
+    [t]
+  );
+
+  // Auto-scroll
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // Sample menu data (translate name and quantity)
-  const todaysMenu: MenuItemType[] = [
-    { name: t('poha', 'Poha'), quantity: t('oneBowl', '1 bowl'), emoji: '🍚' },
-    { name: t('banana', 'Banana'), quantity: t('onePiece', '1 piece'), emoji: '🍌' },
-    { name: t('milk', 'Milk'), quantity: t('oneGlass', '1 glass'), emoji: '🥛' },
-    { name: t('jalebi', 'Jalebi'), quantity: t('twoPieces', '2 pieces'), emoji: '🟡' },
-  ];
-
-  // Simulate WhatsApp-style conversation on load
+  // Simulate conversation on load
   useEffect(() => {
     const sessionId = generateSessionId();
     const mealType = getMealTypeFromTime();
 
-    const simulateConversation = async () => {
-      // AI greeting message
-      const greeting: ChatMessage = {
-        id: `msg_${Date.now()}`,
-        type: 'system',
-        content: {
-          text: `${t('goodMorning', 'Hello')}! 👋 ${t('greetingHelp', "I'm here to help track your meals today.")} ${t(
-            'whatDidYouHave',
-            'What did you have for'
-          )} ${t(mealType, mealType)}?`,
-        },
-        timestamp: new Date(),
-      };
+    const greeting: ChatMessage = {
+      id: `msg_${Date.now()}`,
+      type: 'system',
+      content: {
+        text: t('greetingFull', {
+          greeting: t('goodMorning'),
+          help: t('greetingHelp'),
+          question: t('whatDidYouHave'),
+          meal: t(mealType),
+        }),
+      },
+      timestamp: new Date(),
+    };
 
-      setMessages([greeting]);
+    const menuCard: ChatMessage = {
+      id: `msg_${Date.now()}_menu_card`,
+      type: 'menu_card',
+      content: {
+        menu: todaysMenu,
+        mealType,
+        time: new Date(),
+      },
+      timestamp: new Date(),
+    };
 
-      // Show typing indicator
-      setTimeout(() => {
-        setIsTyping(true);
-      }, 1000);
-
-      // User response
-      setTimeout(() => {
-        setIsTyping(false);
-        const userResponse: ChatMessage = {
-          id: `msg_${Date.now()}_1`,
-          type: 'system',
-          content: {
-            text: t('sampleUserMenu', 'Today’s menu includes poha, some jalebi, and a glass of milk.'),
-          },
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, userResponse]);
-      }, 2500);
-
-      // AI follow-up
-      setTimeout(() => {
-        setIsTyping(true);
-      }, 3000);
-
-      setTimeout(() => {
-        setIsTyping(false);
-        const aiResponse: ChatMessage = {
+    setMessages([greeting]);
+    setTimeout(() => setIsTyping(true), 1000);
+    setTimeout(() => {
+      setIsTyping(false);
+      setMessages((prev) => [...prev, menuCard]);
+    }, 2500);
+    setTimeout(() => setIsTyping(true), 3000);
+    setTimeout(() => {
+      setIsTyping(false);
+      setMessages((prev) => [
+        ...prev,
+        {
           id: `msg_${Date.now()}_2`,
           type: 'system',
-          content: {
-            text: t('aiPhotoPrompt', 'Can you take a photo of your meal so I can analyze the nutritional content? 📸'),
-          },
+          content: { text: t('aiPhotoPrompt') },
           timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, aiResponse]);
-      }, 4500);
-    };
+        },
+      ]);
+    }, 4500);
 
     const newSession: ChatSession = {
       id: sessionId,
@@ -175,11 +206,9 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       status: 'pending',
       createdAt: new Date(),
     };
-
     setCurrentSession(newSession);
     saveChatSession(newSession);
-    simulateConversation();
-  }, []);
+  }, [t, todaysMenu]);
 
   // Typing indicator component
   const TypingIndicator = () => (
@@ -199,10 +228,10 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
     return {
-      items_food: ['Poha', 'Banana', 'Milk', 'jalebi'],
-      input_menu: ['jalebi'],
-      found_items: ['jalebi'],
-      missing_items: [],
+      itemsFood: ['Poha', 'Banana', 'Milk', 'jalebi'],
+      inputMenu: ['jalebi'],
+      foundItems: ['jalebi'],
+      missingItems: [],
       nutritions: {
         Poha: {
           calories: 'approximately 400-500 kcal per 100g',
@@ -222,10 +251,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   };
 
   const handleImageUpload = async (imageData: string) => {
-    setIsAnalyzing(true);
-    setImagePreview(imageData);
-    setShowImageOptions(false);
-
+    setIsTyping(true);
     // Add user message with image
     const userMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
@@ -278,61 +304,36 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
         saveChatSession(updatedSession);
       }
 
-      // Add AI meal menu prompt after analysis
-      setTimeout(() => {
-        setIsTyping(true);
-
-        setTimeout(() => {
-          setIsTyping(false);
-
-          const menuPrompt: ChatMessage = {
-            id: `msg_${Date.now()}_menu_prompt`,
-            type: 'system',
-            content: {
-              text: t('menuRecommendation', "Here's today's recommended meal menu based on your analysis:"),
-              showMenu: true,
-              menu: todaysMenu,
-            },
-            timestamp: new Date(),
-          };
-
-          setMessages((prev) => [...prev, menuPrompt]);
-
-          // Start feedback flow in chat instead of questionnaire
-          setTimeout(() => {
-            startFeedbackFlow();
-          }, 2000);
-        }, 1500);
-      }, 1000);
-
       toast.success('Image analysis completed!');
-      setPhotoAnalyzed(true);
+
+      setTimeout(() => {
+        setIsTyping(false);
+
+        startFeedbackFlow();
+      }, 1000);
     } catch (error) {
       setIsTyping(false);
       toast.error('Failed to analyze image. Please try again.');
     } finally {
-      setIsAnalyzing(false);
+      setIsTyping(false);
     }
   };
 
+  // Camera capture handler
+  const handleTakePhoto = () => {
+    const imageSrc = webcamRef.current?.getScreenshot();
+    if (imageSrc) {
+      handleImageUpload(imageSrc);
+      setShowCamera(false);
+    }
+  };
+
+  // Camera-only photo capture for food prompt
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
       handleImageUpload(imageUrl);
-    }
-  };
-
-  const handleCameraCapture = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) {
-      toast.error('Camera permission required');
-      return;
-    }
-
-    const result = await takePicture();
-    if (result?.dataUrl) {
-      handleImageUpload(result.dataUrl);
     }
   };
 
@@ -461,7 +462,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-accent/20 via-primary/10 to-secondary/15 max-w-4xl mx-auto">
+    <div className="flex flex-col h-full max-w-4xl mx-auto">
       {/* WhatsApp-style Header */}
       <div className="bg-primary text-primary-foreground p-4 shadow-lg">
         <div className="flex items-center space-x-3">
@@ -475,16 +476,37 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
         </div>
       </div>
 
+      {/* Camera Modal */}
+      {showCamera && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg flex flex-col items-center">
+            <Webcam
+              audio={false}
+              ref={webcamRef}
+              screenshotFormat="image/jpeg"
+              videoConstraints={{ facingMode: 'environment' }}
+              className="rounded-lg"
+            />
+            <Button className="mt-4" onClick={handleTakePhoto}>
+              {t('uploadPhoto', 'Click Photo')}
+            </Button>
+            <Button className="mt-2" variant="outline" onClick={() => setShowCamera(false)}>
+              {t('back', 'Back')}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Chat Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-background to-muted/20">
         {messages.map((message, index) => (
           <div key={index}>
             {message.type === 'user' && (
               <div className="flex justify-end mb-3">
-                {message.content.image ? (
+                {message?.content?.image ? (
                   <div className="message-bubble-user">
                     <img
-                      src={message.content.image}
+                      src={message?.content?.image}
                       alt="Food upload"
                       className="w-48 h-36 object-cover rounded-lg mb-2"
                     />
@@ -498,7 +520,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                   </div>
                 ) : (
                   <div className="message-bubble-user">
-                    <p>{message.content.text}</p>
+                    <p>{message?.content?.text}</p>
                     <div className="flex items-center justify-end mt-1 space-x-1">
                       <span className="text-xs opacity-75">
                         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -510,17 +532,76 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
               </div>
             )}
 
+            {/* Menu Card with location, date, meal type */}
+            {message.type === 'menu_card' && (
+              <div className="flex justify-start mb-3">
+                <div className="message-bubble-ai rounded-xl p-4 shadow max-w-xs">
+                  <div className="mb-2 font-semibold">
+                    <span>{t('todaysMenu', "Today's Menu")}</span>
+                  </div>
+                  <div className="mb-2 text-xs text-muted-foreground">
+                    <div>
+                      <span>
+                        {t('date', 'Date')}: {new Date().toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span>{t('mealType', 'Meal Type')}: Breakfast</span>
+                    </div>
+                    <div>
+                      <span>
+                        {t('location', 'Location')}: {locationName || t('detectingLocation', 'Detecting...')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    {message?.content?.menu.map((item: MenuItem, idx: number) => (
+                      <div key={idx} className="flex items-center text-sm mb-1">
+                        <span className="mr-2">{item.emoji}</span>
+                        <span>
+                          {item.name} - {item.quantity}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-right text-xs text-gray-400 mt-1">
+                    {message?.content?.time
+                      ? new Date(message?.content?.time).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : ''}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {(message.type === 'system' || message.type === 'completion') && (
               <div className="flex justify-start mb-3">
                 <div className="message-bubble-ai">
-                  <p>{message.content.text || message.content.greeting}</p>
+                  <p>{message?.content?.text || message?.content?.greeting}</p>
 
-                  {/* Show Menu */}
-                  {message.content.showMenu && message.content.menu && (
+                  {/* Show green upload button only for aiPhotoPrompt */}
+                  {message?.content?.text ===
+                    t(
+                      'aiPhotoPrompt',
+                      'Can you take a photo of your meal so I can analyze the nutritional content? 📸'
+                    ) && (
+                    <Button
+                      className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg mt-3"
+                      onClick={() => setShowCamera(true)}
+                    >
+                      <Camera className="w-5 h-5" />
+                      <span>{t('uploadPhoto', 'Upload Photo')}</span>
+                    </Button>
+                  )}
+
+                  {/* ...existing menu rendering... */}
+                  {message?.content?.showMenu && message?.content?.menu && (
                     <div className="mt-3 bg-background/80 rounded-lg p-3 border border-border/50">
                       <h4 className="font-semibold text-sm mb-2">📋 {t('todaysMenu', "Today's Meal Menu:")}</h4>
                       <div className="space-y-2">
-                        {message.content.menu.map((item: MenuItemType, idx: number) => (
+                        {message?.content?.menu.map((item: MenuItem, idx: number) => (
                           <div key={idx} className="flex items-center justify-between text-sm">
                             <span className="flex items-center">
                               <span className="mr-2">{item.emoji}</span>
@@ -551,7 +632,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                     <div className="bg-success/10 p-3 rounded-lg">
                       <p className="text-sm font-medium text-success mb-2">{t('itemsFound', 'Items Found')}:</p>
                       <div className="flex flex-wrap gap-1">
-                        {message.content.found_items.map((item: string, idx: number) => (
+                        {message?.content?.foundItems.map((item: string, idx: number) => (
                           <span key={idx} className="bg-success text-white text-xs px-2 py-1 rounded-full">
                             {item}
                           </span>
@@ -559,13 +640,13 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                       </div>
                     </div>
 
-                    {message.content.missing_items.length > 0 && (
+                    {message?.content?.missingItems.length > 0 && (
                       <div className="bg-destructive/10 p-3 rounded-lg">
                         <p className="text-sm font-medium text-destructive mb-2">
                           {t('missingItems', 'Missing Items')}:
                         </p>
                         <div className="flex flex-wrap gap-1">
-                          {message.content.missing_items.map((item: string, idx: number) => (
+                          {message?.content?.missingItems.map((item: string, idx: number) => (
                             <span key={idx} className="bg-destructive text-white text-xs px-2 py-1 rounded-full">
                               {item}
                             </span>
@@ -577,7 +658,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                     <div className="bg-primary/10 p-3 rounded-lg">
                       <p className="text-sm font-medium text-primary mb-2">{t('nutritionInfo', 'Nutrition Info')}:</p>
                       <div className="space-y-2 text-xs">
-                        {Object.entries(message.content.nutritions).map(([food, nutrition], idx) => (
+                        {Object.entries(message?.content?.nutritions).map(([food, nutrition], idx) => (
                           <div key={idx} className="bg-background/80 p-2 rounded">
                             <p className="font-medium capitalize">{food}</p>
                             {nutrition &&
@@ -604,17 +685,17 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
               <div className="flex justify-start mb-3">
                 <div className="message-bubble-ai">
                   <p>
-                    {message.content.icon && <span className="mr-2">{message.content.icon}</span>}
-                    {message.content.text}
+                    {message?.content?.icon && <span className="mr-2">{message?.content?.icon}</span>}
+                    {message?.content?.text}
                   </p>
                   <div className="flex gap-2 mt-3">
-                    {message.content.options?.map((option) => (
+                    {message?.content?.options?.map((option) => (
                       <Button
                         key={option.value}
                         size="sm"
                         variant="outline"
                         className="flex-1 bg-background/80 hover:bg-primary hover:text-primary-foreground flex items-center justify-center gap-1"
-                        onClick={() => handleFeedbackAnswer(message.content.questionKey, option.label)}
+                        onClick={() => handleFeedbackAnswer(message?.content?.questionKey, option.label)}
                       >
                         {option.icon && <span>{option.icon}</span>}
                         <span>{option.label}</span>
@@ -636,10 +717,10 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                   <div className="space-y-2">
                     <p className="font-semibold">📝 Feedback Submitted</p>
                     <div className="space-y-1 text-sm">
-                      <p>Freshness: {message.content.freshness}</p>
-                      <p>Quantity: {message.content.quantity}</p>
-                      <p>Satisfaction: {message.content.satisfaction}</p>
-                      {message.content.comments && <p>Comments: {message.content.comments}</p>}
+                      <p>Freshness: {message?.content?.freshness}</p>
+                      <p>Quantity: {message?.content?.quantity}</p>
+                      <p>Satisfaction: {message?.content?.satisfaction}</p>
+                      {message?.content?.comments && <p>Comments: {message?.content?.comments}</p>}
                     </div>
                   </div>
                   <div className="flex items-center justify-end mt-1">
@@ -659,37 +740,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
 
         <div ref={messagesEndRef} />
       </div>
-
-      {/* WhatsApp-style Input Area */}
-      {!photoAnalyzed && (
-        <div className="bg-background border-t border-border p-4">
-          <div className="flex items-center space-x-2">
-            <Button
-              onClick={handleGallerySelect}
-              variant="outline"
-              size="sm"
-              className="flex flex-col items-center p-3 h-auto"
-            >
-              <Image className="w-5 h-5 mb-1" />
-              <span className="text-xs">{t('gallery', 'Gallery')}</span>
-            </Button>
-
-            <div className="flex-1 bg-muted rounded-full px-4 py-3">
-              <p className="text-sm text-muted-foreground">
-                {isAnalyzing
-                  ? t('analyzing', 'Analyzing image...')
-                  : t('selectPhotoPrompt', 'Select a photo to continue...')}
-              </p>
-            </div>
-
-            <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" disabled>
-              <Smile className="w-5 h-5" />
-            </Button>
-          </div>
-
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
-        </div>
-      )}
     </div>
   );
 };
