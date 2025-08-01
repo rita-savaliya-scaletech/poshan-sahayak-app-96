@@ -46,7 +46,7 @@ const Index = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background min-w-[320px] max-w-[768px] mx-auto">
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         {renderContent()}
