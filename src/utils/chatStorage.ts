@@ -1,6 +1,6 @@
 export interface ChatMessage {
   id: string;
-  type: 'system' | 'user' | 'analysis' | 'questionnaire' | 'completion';
+  type: 'system' | 'user' | 'analysis' | 'questionnaire' | 'completion' | 'feedback_question';
   content: any;
   timestamp: Date;
 }

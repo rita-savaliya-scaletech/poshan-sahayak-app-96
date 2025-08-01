@@ -59,6 +59,18 @@ const resources = {
       feedbackSaved: "Thank you! Your feedback has been saved successfully.",
       redirectingToHistory: "Redirecting to history dashboard...",
       
+      // AI Messages
+      great: "Great",
+      menuRecommendation: "Here's today's recommended meal menu based on your analysis:",
+      analysisComplete: "Analysis Complete",
+      feedbackIntro: "Now I have a few quick questions about your meal experience. Let's start:",
+      feedbackSubmitted: "Feedback submitted successfully!",
+      
+      // Feedback Questions
+      mealFreshQuestion: "Was the meal fresh?",
+      mealTastyQuestion: "Was the meal tasty?", 
+      mealQuantityQuestion: "Was the quantity sufficient?",
+      
       // App Name
       appName: "Poshan Tracker"
     }
@@ -119,6 +131,18 @@ const resources = {
       // Navigation & Feedback
       feedbackSaved: "આભાર! તમારો પ્રતિસાદ સફળતાપૂર્વક સાચવવામાં આવ્યો છે.",
       redirectingToHistory: "ઇતિહાસ ડેશબોર્ડ પર રીડાયરેક્ટ કરી રહ્યાં છીએ...",
+      
+      // AI Messages
+      great: "શાનદાર",
+      menuRecommendation: "તમારા વિશ્લેષણના આધારે આજનું ભલામણ કરેલ ભોજન મેન્યુ અહીં છે:",
+      analysisComplete: "વિશ્લેષણ પૂર્ણ",
+      feedbackIntro: "હવે મારી પાસે તમારા ભોજનના અનુભવ વિશે કેટલાક ઝડપી પ્રશ્નો છે. ચાલો શરૂ કરીએ:",
+      feedbackSubmitted: "પ્રતિસાદ સફળતાપૂર્વક સબમિટ થયો!",
+      
+      // Feedback Questions
+      mealFreshQuestion: "શું ભોજન તાજું હતું?",
+      mealTastyQuestion: "શું ભોજન સ્વાદિષ્ટ હતું?",
+      mealQuantityQuestion: "શું માત્રા પૂરતી હતી?",
       
       // App Name
       appName: "પોષણ ટ્રેકર"

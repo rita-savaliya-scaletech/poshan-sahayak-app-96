@@ -71,7 +71,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
         id: `msg_${Date.now()}`,
         type: 'system',
         content: {
-          text: `Hello! 👋 I'm here to help track your meals today. What did you have for ${mealType}?`
+          text: `${t('goodMorning', 'Hello')}! 👋 I'm here to help track your meals today. What did you have for ${t(mealType, mealType)}?`
         },
         timestamp: new Date()
       };
@@ -108,7 +108,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
           id: `msg_${Date.now()}_2`,
           type: 'system',
           content: {
-            text: "Great! Can you take a photo of your meal so I can analyze the nutritional content? 📸"
+            text: `${t('great', 'Great')}! Can you take a photo of your meal so I can analyze the nutritional content? 📸`
           },
           timestamp: new Date()
         };
@@ -243,7 +243,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
             id: `msg_${Date.now()}_menu_prompt`,
             type: 'system',
             content: {
-              text: "Here's today's recommended meal menu based on your analysis:",
+              text: t('menuRecommendation', "Here's today's recommended meal menu based on your analysis:"),
               showMenu: true,
               menu: todaysMenu
             },
@@ -252,9 +252,9 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
           
           setMessages(prev => [...prev, menuPrompt]);
           
-          // Show questionnaire after menu
+          // Start feedback flow in chat instead of questionnaire
           setTimeout(() => {
-            setShowQuestionnaire(true);
+            startFeedbackFlow();
           }, 2000);
         }, 1500);
       }, 1000);
@@ -302,16 +302,83 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     }
   };
 
-  const handleQuestionnaireComplete = (data: any) => {
-    const questionnaireMessage: ChatMessage = {
-      id: `msg_${Date.now()}`,
-      type: 'questionnaire',
-      content: data,
+  // Feedback flow state
+  const [feedbackStep, setFeedbackStep] = useState(0);
+  const [feedbackData, setFeedbackData] = useState<any>({});
+  
+  const feedbackQuestions = [
+    { key: 'mealFresh', text: t('mealFreshQuestion', 'Was the meal fresh?'), type: 'yesno' },
+    { key: 'mealTasty', text: t('mealTastyQuestion', 'Was the meal tasty?'), type: 'yesno' },
+    { key: 'mealQuantity', text: t('mealQuantityQuestion', 'Was the quantity sufficient?'), type: 'yesno' }
+  ];
+
+  const startFeedbackFlow = () => {
+    setTimeout(() => {
+      setIsTyping(true);
+      
+      setTimeout(() => {
+        setIsTyping(false);
+        const feedbackStart: ChatMessage = {
+          id: `msg_${Date.now()}_feedback_start`,
+          type: 'system',
+          content: {
+            text: t('feedbackIntro', 'Now I have a few quick questions about your meal experience. Let\'s start:'),
+          },
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, feedbackStart]);
+        
+        // Ask first question
+        setTimeout(() => askNextQuestion(), 1000);
+      }, 1500);
+    }, 500);
+  };
+
+  const askNextQuestion = () => {
+    if (feedbackStep < feedbackQuestions.length) {
+      setIsTyping(true);
+      
+      setTimeout(() => {
+        setIsTyping(false);
+        const question = feedbackQuestions[feedbackStep];
+        const questionMessage: ChatMessage = {
+          id: `msg_${Date.now()}_question_${feedbackStep}`,
+          type: 'feedback_question',
+          content: {
+            text: question.text,
+            questionKey: question.key,
+            questionType: question.type,
+            options: question.type === 'yesno' ? [t('yes', 'Yes'), t('no', 'No')] : []
+          },
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, questionMessage]);
+      }, 1000);
+    } else {
+      completeFeedback();
+    }
+  };
+
+  const handleFeedbackAnswer = (questionKey: string, answer: string) => {
+    const updatedFeedbackData = { ...feedbackData, [questionKey]: answer };
+    setFeedbackData(updatedFeedbackData);
+    
+    // Add user response
+    const userResponse: ChatMessage = {
+      id: `msg_${Date.now()}_answer`,
+      type: 'user',
+      content: { text: answer },
       timestamp: new Date()
     };
-    const updatedMessages = [...messages, questionnaireMessage];
-    setMessages(updatedMessages);
+    setMessages(prev => [...prev, userResponse]);
     
+    setFeedbackStep(prev => prev + 1);
+    
+    // Ask next question after delay
+    setTimeout(() => askNextQuestion(), 1500);
+  };
+
+  const completeFeedback = () => {
     setTimeout(() => {
       const completionMessage: ChatMessage = {
         id: `msg_${Date.now()}_completion`,
@@ -321,15 +388,13 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
         },
         timestamp: new Date()
       };
-      const finalMessages = [...updatedMessages, completionMessage];
-      setMessages(finalMessages);
-      setShowQuestionnaire(false);
+      setMessages(prev => [...prev, completionMessage]);
       
       if (currentSession) {
         const completedSession = {
           ...currentSession,
-          messages: finalMessages,
-          questionnaireData: data,
+          messages: [...messages, completionMessage],
+          questionnaireData: feedbackData,
           status: 'completed' as const,
           completedAt: new Date()
         };
@@ -337,7 +402,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
         saveChatSession(completedSession);
       }
       
-      toast.success('Feedback submitted successfully!');
+      toast.success(t('feedbackSubmitted', 'Feedback submitted successfully!'));
       
       setTimeout(() => {
         onNavigateToHistory?.();
@@ -432,10 +497,10 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
               <div className="flex justify-start mb-3">
                 <div className="message-bubble-ai max-w-[85%]">
                   <div className="space-y-3">
-                    <p className="font-semibold text-success">✅ Analysis Complete!</p>
-                    
-                    <div className="bg-success/10 p-3 rounded-lg">
-                      <p className="text-sm font-medium text-success mb-2">Items Found:</p>
+                     <p className="font-semibold text-success">✅ {t('analysisComplete', 'Analysis Complete')}!</p>
+                     
+                     <div className="bg-success/10 p-3 rounded-lg">
+                       <p className="text-sm font-medium text-success mb-2">{t('itemsFound', 'Items Found')}:</p>
                       <div className="flex flex-wrap gap-1">
                         {message.content.found_items.map((item: string, idx: number) => (
                           <span key={idx} className="bg-success text-white text-xs px-2 py-1 rounded-full">
@@ -446,8 +511,8 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                     </div>
 
                     {message.content.missing_items.length > 0 && (
-                      <div className="bg-destructive/10 p-3 rounded-lg">
-                        <p className="text-sm font-medium text-destructive mb-2">Missing Items:</p>
+                       <div className="bg-destructive/10 p-3 rounded-lg">
+                         <p className="text-sm font-medium text-destructive mb-2">{t('missingItems', 'Missing Items')}:</p>
                         <div className="flex flex-wrap gap-1">
                           {message.content.missing_items.map((item: string, idx: number) => (
                             <span key={idx} className="bg-destructive text-white text-xs px-2 py-1 rounded-full">
@@ -458,8 +523,8 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                       </div>
                     )}
 
-                    <div className="bg-primary/10 p-3 rounded-lg">
-                      <p className="text-sm font-medium text-primary mb-2">Nutrition Info:</p>
+                     <div className="bg-primary/10 p-3 rounded-lg">
+                       <p className="text-sm font-medium text-primary mb-2">{t('nutritionInfo', 'Nutrition Info')}:</p>
                       <div className="space-y-2 text-xs">
                         {Object.entries(message.content.nutritions).map(([food, nutrition], idx) => (
                           <div key={idx} className="bg-background/80 p-2 rounded">
@@ -472,6 +537,36 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                       </div>
                     </div>
                   </div>
+                  <div className="flex items-center justify-start mt-2">
+                    <span className="text-xs text-muted-foreground">
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {message.type === 'feedback_question' && (
+              <div className="flex justify-start mb-3">
+                <div className="message-bubble-ai">
+                  <p>{message.content.text}</p>
+                  
+                  {message.content.questionType === 'yesno' && (
+                    <div className="flex gap-2 mt-3">
+                      {message.content.options?.map((option: string) => (
+                        <Button
+                          key={option}
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 bg-background/80 hover:bg-primary hover:text-primary-foreground"
+                          onClick={() => handleFeedbackAnswer(message.content.questionKey, option)}
+                        >
+                          {option}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-start mt-2">
                     <span className="text-xs text-muted-foreground">
                       {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -510,15 +605,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
         {/* Typing Indicator */}
         {isTyping && <TypingIndicator />}
 
-        
-        {/* Questionnaire */}
-        {showQuestionnaire && (
-          <div className="flex justify-center">
-            <div className="w-full max-w-md">
-              <MealQuestionnaire onComplete={handleQuestionnaireComplete} />
-            </div>
-          </div>
-        )}
         
         <div ref={messagesEndRef} />
       </div>
