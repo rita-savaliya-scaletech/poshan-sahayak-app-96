@@ -229,21 +229,86 @@ const HistoryDashboard = () => {
                       </div>
                     </div>
 
-                    {/* Analysis Results */}
+                    {/* Enhanced Analysis Results */}
                     {session.analysisResult && (
-                      <div className="grid sm:grid-cols-2 gap-4 p-4 bg-gradient-to-br from-muted/20 to-muted/10 rounded-lg border border-border/30">
-                        <div className="flex items-center space-x-2">
-                          <CheckCircle className="w-4 h-4 text-success" />
-                          <span className="text-sm">
-                            <span className="font-medium">{(session.analysisResult as any)?.found_items?.length || 0}</span> {t('itemsFound', 'items found')}
-                          </span>
+                      <div className="space-y-3 p-4 bg-gradient-to-br from-muted/20 to-muted/10 rounded-lg border border-border/30">
+                        {/* Summary Stats */}
+                        <div className="grid sm:grid-cols-3 gap-4">
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="w-4 h-4 text-success" />
+                            <span className="text-sm">
+                              <span className="font-medium">{(session.analysisResult as any)?.found_items?.length || 0}</span> {t('itemsFound', 'items found')}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <XCircle className="w-4 h-4 text-destructive" />
+                            <span className="text-sm">
+                              <span className="font-medium">{(session.analysisResult as any)?.missing_items?.length || 0}</span> {t('missingItems', 'missing')}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <TrendingUp className="w-4 h-4 text-primary" />
+                            <span className="text-sm">
+                              <span className="font-medium">{(session.analysisResult as any)?.itemsFood?.length || 0}</span> {t('totalItems', 'total items')}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <XCircle className="w-4 h-4 text-destructive" />
-                          <span className="text-sm">
-                            <span className="font-medium">{(session.analysisResult as any)?.missing_items?.length || 0}</span> {t('missingItems', 'missing')}
-                          </span>
-                        </div>
+
+                        {/* Detailed Found Items */}
+                        {(session.analysisResult as any)?.found_items?.length > 0 && (
+                          <div className="bg-success/5 p-3 rounded-lg border border-success/20">
+                            <p className="text-sm font-medium text-success mb-2 flex items-center">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              {t('foundFromMenu', 'Found from today\'s menu')}:
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {(session.analysisResult as any).found_items.map((item: string, idx: number) => (
+                                <span key={idx} className="bg-success/20 text-success text-xs px-2 py-1 rounded-full border border-success/30">
+                                  ✓ {item}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Additional Items Detected */}
+                        {(session.analysisResult as any)?.itemsFood?.length > 0 && (
+                          <div className="bg-primary/5 p-3 rounded-lg border border-primary/20">
+                            <p className="text-sm font-medium text-primary mb-2 flex items-center">
+                              <TrendingUp className="w-3 h-3 mr-1" />
+                              {t('allDetectedItems', 'All detected food items')}:
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {(session.analysisResult as any).itemsFood.map((item: string, idx: number) => (
+                                <span key={idx} className="bg-primary/20 text-primary text-xs px-2 py-1 rounded-full border border-primary/30">
+                                  🍽️ {item}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Nutrition Highlights */}
+                        {(session.analysisResult as any)?.nutritions && Object.keys((session.analysisResult as any).nutritions).length > 0 && (
+                          <div className="bg-accent/5 p-3 rounded-lg border border-accent/20">
+                            <p className="text-sm font-medium text-accent mb-2 flex items-center">
+                              <Users className="w-3 h-3 mr-1" />
+                              {t('nutritionHighlights', 'Nutrition highlights')}:
+                            </p>
+                            <div className="grid gap-1 text-xs">
+                              {Object.entries((session.analysisResult as any).nutritions)
+                                .slice(0, 2)
+                                .map(([food, nutrition]: [string, any], idx: number) => (
+                                  <div key={idx} className="flex items-center justify-between bg-background/60 p-1 rounded">
+                                    <span className="font-medium capitalize">{food}</span>
+                                    {nutrition?.calories && (
+                                      <span className="text-muted-foreground">📊 {nutrition.calories}</span>
+                                    )}
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 

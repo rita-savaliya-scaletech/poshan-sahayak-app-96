@@ -114,8 +114,16 @@ const resources = {
       golVadiFadaLapsi: 'Gol vadi fada lapsi',
       seasonalGreenVegetables: 'Seasonal green vegetables',
       gallery: 'Gallery',
-      selectPhotoPrompt: 'Select a photo to continue...',
-      alreadySubmitted: 'You have already submitted your response for {{meal}}.',
+        selectPhotoPrompt: 'Select a photo to continue...',
+        alreadySubmitted: 'You have already submitted your response for {{meal}}.',
+        feedbackComplete: "Thank you for your feedback!",
+        seeYouAt: "See you at",
+        alreadyCompleted: "You have already completed",
+        feedbackToday: "feedback today",
+        foundFromMenu: "Found from today's menu",
+        allDetectedItems: "All detected food items", 
+        nutritionHighlights: "Nutrition highlights",
+        totalItems: "total items",
     },
   },
   gu: {
@@ -174,9 +182,8 @@ const resources = {
       helpSupport: 'મદદ અને સપોર્ટ',
       settings: 'સેટિંગ્સ',
 
-      // Navigation & Feedback
-      feedbackSaved: 'આભાર! તમારો પ્રતિસાદ સફળતાપૂર્વક સાચવવામાં આવ્યો છે.',
-      redirectingToHistory: 'ઇતિહાસ ડેશબોર્ડ પર રીડાયરેક્ટ કરી રહ્યાં છીએ...',
+        // Navigation & Feedback
+        redirectingToHistory: 'ઇતિહાસ ડેશબોર્ડ પર રીડાયરેક્ટ કરી રહ્યાં છીએ...',
 
       // AI Messages
       great: 'શાનદાર',
@@ -227,9 +234,18 @@ const resources = {
       tuverDalKhichdi: 'તુવેર દાળ ખીચડી',
       golVadiFadaLapsi: 'ગોળ વાડી ફડા લાપસી',
       seasonalGreenVegetables: 'ઋતુ પ્રમાણેની લીલી શાકભાજી',
-      gallery: 'ગેલેરી',
-      selectPhotoPrompt: 'આગળ વધવા માટે ફોટો પસંદ કરો...',
-      gram: 'ગ્રામ',
+        gallery: 'ગેલેરી',
+        selectPhotoPrompt: 'આગળ વધવા માટે ફોટો પસંદ કરો...',
+        gram: 'ગ્રામ',
+        feedbackComplete: "તમારા પ્રતિસાદ માટે આભાર!",
+        feedbackSaved: "આભાર! તમારો પ્રતિસાદ સફળતાપૂર્વક સાચવાયો છે.",
+        seeYouAt: "તમને મળીએ",
+        alreadyCompleted: "તમે પહેલેથી જ પૂર્ણ કર્યું છે",
+        feedbackToday: "આજે પ્રતિસાદ",
+        foundFromMenu: "આજના મેનુમાંથી મળ્યું",
+        allDetectedItems: "બધી શોધાયેલ ખાદ્ય વસ્તુઓ",
+        nutritionHighlights: "પોષણ હાઇલાઇટ્સ",
+        totalItems: "કુલ વસ્તુઓ",
     },
   },
 };

@@ -9,6 +9,7 @@ import {
   saveChatSession,
   generateSessionId,
   getMealTypeFromTime,
+  getSessionForMealToday,
   type ChatSession,
   type ChatMessage,
 } from '@/utils/chatStorage';
@@ -176,8 +177,29 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
 
   // Simulate conversation on load
   useEffect(() => {
-    const sessionId = generateSessionId();
     const mealType = getMealTypeFromTime();
+    
+    // Check if user already completed feedback for this meal today
+    if (mealType) {
+      const existingSession = getSessionForMealToday(mealType);
+      if (existingSession) {
+        // Show "already completed" message
+        const nextMealTime = getNextMealTime();
+        const alreadyCompletedMessage: ChatMessage = {
+          id: `msg_${Date.now()}`,
+          type: 'completion',
+          content: {
+            text: `${t('alreadyCompleted', 'You have already completed')} ${t(mealType)} ${t('feedbackToday', 'feedback today')}. ${t('seeYouAt', 'See you at')} ${nextMealTime} 😊`,
+          },
+          timestamp: new Date(),
+        };
+        setMessages([alreadyCompletedMessage]);
+        return;
+      }
+    }
+
+    // If no existing session or outside meal time, start normal flow
+    const sessionId = generateSessionId();
 
     const greeting: ChatMessage = {
       id: `msg_${Date.now()}`,
@@ -187,7 +209,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
           greeting: t('goodMorning'),
           help: t('greetingHelp'),
           question: t('whatDidYouHave'),
-          meal: t(mealType),
+          meal: t(mealType || 'meal'),
         }),
       },
       timestamp: new Date(),
@@ -227,7 +249,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     const newSession: ChatSession = {
       id: sessionId,
       messages: [],
-      mealType,
+      mealType: mealType || 'breakfast',
       date: new Date().toISOString().split('T')[0],
       status: 'pending',
       createdAt: new Date(),

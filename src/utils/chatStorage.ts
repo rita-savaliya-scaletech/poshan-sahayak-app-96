@@ -70,6 +70,21 @@ export const updateChatSession = (sessionId: string, updates: Partial<ChatSessio
   }
 };
 
+export const getSessionForMealToday = (mealType: 'breakfast' | 'lunch' | 'dinner'): ChatSession | null => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const history = getChatHistory();
+    return history.find(session => 
+      session.date === today && 
+      session.mealType === mealType && 
+      session.status === 'completed'
+    ) || null;
+  } catch (error) {
+    console.error('Failed to get session for meal today:', error);
+    return null;
+  }
+};
+
 export const generateSessionId = (): string => {
   return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
