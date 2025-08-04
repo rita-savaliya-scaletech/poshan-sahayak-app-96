@@ -58,36 +58,63 @@ const useMealQuestionnaireQuestions = () => {
   const { t } = useTranslation();
   return [
     {
-      key: 'mealFresh',
-      text: t('mealFreshQuestion'),
+      key: '1',
+      text: t('question1'),
       icon: '🥗',
       type: 'single',
       options: [
-        { value: 'yes', label: t('yes'), icon: '👍' },
-        { value: 'no', label: t('no'), icon: '👎' },
-        { value: 'not_sure', label: t('notSure'), icon: '🤔' },
+        { value: t('q1opt1'), label: t('q1opt1'), icon: '👍' },
+        { value: t('q1opt2'), label: t('q1opt2'), icon: '😐' },
+        { value: t('q1opt3'), label: t('q1opt3'), icon: '🙁' },
+        { value: t('q1opt4'), label: t('q1opt4'), icon: '🤔' },
       ],
     },
     {
-      key: 'mealTasty',
-      text: t('mealTastyQuestion'),
+      key: '2',
+      text: t('question2'),
       icon: '😋',
       type: 'single',
       options: [
-        { value: 'very_tasty', label: t('veryTasty', 'Very tasty'), icon: '😍' },
-        { value: 'okay', label: t('okay', 'Okay'), icon: '🙂' },
-        { value: 'not_tasty', label: t('notTasty', 'Not tasty'), icon: '😐' },
+        { value: t('q2opt1'), label: t('q2opt1'), icon: '😍' },
+        { value: t('q2opt2'), label: t('q2opt2'), icon: '😋' },
+        { value: t('q2opt3'), label: t('q2opt3'), icon: '👍' },
+        { value: t('q2opt4'), label: t('q2opt4'), icon: '👎' },
       ],
     },
     {
-      key: 'mealQuantity',
-      text: t('mealQuantityQuestion'),
+      key: '3',
+      text: t('question3'),
       icon: '🍽️',
       type: 'single',
       options: [
-        { value: 'yes', label: t('yes'), icon: '👌' },
-        { value: 'no', label: t('no'), icon: '🙁' },
-        { value: 'too_much', label: t('tooMuch', 'Too much'), icon: '😅' },
+        { value: t('q3opt1'), label: t('q3opt1'), icon: '😅' },
+        { value: t('q3opt2'), label: t('q3opt2'), icon: '👍' },
+        { value: t('q3opt3'), label: t('q3opt3'), icon: '🙁' },
+        { value: t('q3opt4'), label: t('q3opt4'), icon: '👎' },
+      ],
+    },
+    {
+      key: '4',
+      text: t('question4'),
+      icon: '😋',
+      type: 'single',
+      options: [
+        { value: t('q4opt1'), label: t('q4opt1'), icon: '😍' },
+        { value: t('q4opt2'), label: t('q4opt2'), icon: '👌' },
+        { value: t('q4opt3'), label: t('q4opt3'), icon: '🙂' },
+        { value: t('q4opt4'), label: t('q4opt4'), icon: '👎' },
+      ],
+    },
+    {
+      key: '5',
+      text: t('question5'),
+      icon: '🍽️',
+      type: 'single',
+      options: [
+        { value: t('q5opt1'), label: t('q5opt1'), icon: '😍' },
+        { value: t('q5opt2'), label: t('q5opt2'), icon: '👌' },
+        { value: t('q5opt3'), label: t('q5opt3'), icon: '👍' },
+        { value: t('q5opt4'), label: t('q5opt4'), icon: '👎' },
       ],
     },
   ];
@@ -135,10 +162,9 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   // Memoize menu for performance
   const todaysMenu = useMemo<MenuItem[]>(
     () => [
-      { name: t('poha'), quantity: t('oneBowl'), emoji: '🍚' },
-      { name: t('banana'), quantity: t('onePiece'), emoji: '🍌' },
-      { name: t('milk'), quantity: t('oneGlass'), emoji: '🥛' },
-      { name: t('jalebi'), quantity: t('twoPieces'), emoji: '🟡' },
+      { name: t('tuverDalKhichdi'), quantity: '100', emoji: '🍛' },
+      { name: t('golVadiFadaLapsi'), quantity: '35', emoji: '🍚' },
+      { name: t('seasonalGreenVegetables'), quantity: '50', emoji: '🥬' },
     ],
     [t]
   );
@@ -560,6 +586,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                         <span className="mr-2">{item.emoji}</span>
                         <span>
                           {item.name} - {item.quantity}
+                          {t('gram')}
                         </span>
                       </div>
                     ))}
@@ -688,13 +715,13 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                     {message?.content?.icon && <span className="mr-2">{message?.content?.icon}</span>}
                     {message?.content?.text}
                   </p>
-                  <div className="flex gap-2 mt-3">
+                  <div className="flex flex-col gap-2 mt-3">
                     {message?.content?.options?.map((option) => (
                       <Button
                         key={option.value}
                         size="sm"
                         variant="outline"
-                        className="flex-1 bg-background/80 hover:bg-primary hover:text-primary-foreground flex items-center justify-center gap-1"
+                        className="flex-1 bg-background/80 hover:bg-primary hover:text-primary-foreground flex items-center justify-start gap-1 px-2 py-1"
                         onClick={() => handleFeedbackAnswer(message?.content?.questionKey, option.label)}
                       >
                         {option.icon && <span>{option.icon}</span>}
