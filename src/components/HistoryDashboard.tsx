@@ -235,13 +235,13 @@ const HistoryDashboard = () => {
                         <div className="flex items-center space-x-2">
                           <CheckCircle className="w-4 h-4 text-success" />
                           <span className="text-sm">
-                            <span className="font-medium">{session.analysisResult.found_items?.length || 0}</span> {t('itemsFound', 'items found')}
+                            <span className="font-medium">{(session.analysisResult as any)?.found_items?.length || 0}</span> {t('itemsFound', 'items found')}
                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <XCircle className="w-4 h-4 text-destructive" />
                           <span className="text-sm">
-                            <span className="font-medium">{session.analysisResult.missing_items?.length || 0}</span> {t('missingItems', 'missing')}
+                            <span className="font-medium">{(session.analysisResult as any)?.missing_items?.length || 0}</span> {t('missingItems', 'missing')}
                           </span>
                         </div>
                       </div>
@@ -252,15 +252,15 @@ const HistoryDashboard = () => {
                       <div className="grid sm:grid-cols-3 gap-3 text-sm">
                         <div className="bg-gradient-to-br from-primary/5 to-primary/10 p-3 rounded-lg border border-primary/20">
                           <span className="font-medium text-primary">{t('freshness')}: </span>
-                          <span className="capitalize">{session.questionnaireData.freshness}</span>
+                          <span className="capitalize">{(session.questionnaireData as any)?.freshness}</span>
                         </div>
                         <div className="bg-gradient-to-br from-secondary/5 to-secondary/10 p-3 rounded-lg border border-secondary/20">
                           <span className="font-medium text-secondary">{t('quantity')}: </span>
-                          <span className="capitalize">{session.questionnaireData.quantity}</span>
+                          <span className="capitalize">{(session.questionnaireData as any)?.quantity}</span>
                         </div>
                         <div className="bg-gradient-to-br from-accent/5 to-accent/10 p-3 rounded-lg border border-accent/20">
                           <span className="font-medium text-accent">{t('satisfaction')}: </span>
-                          <span className="capitalize">{session.questionnaireData.satisfaction}</span>
+                          <span className="capitalize">{(session.questionnaireData as any)?.satisfaction}</span>
                         </div>
                       </div>
                     )}

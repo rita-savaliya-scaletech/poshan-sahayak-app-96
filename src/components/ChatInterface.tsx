@@ -379,6 +379,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   // Feedback flow state
   const [feedbackStep, setFeedbackStep] = useState(0);
   const [feedbackData, setFeedbackData] = useState({});
+  const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
 
   const feedbackQuestions = useMealQuestionnaireQuestions();
 
@@ -438,9 +439,22 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     }
   };
 
+  const getNextMealTime = () => {
+    const now = new Date();
+    const hour = now.getHours();
+    const minutes = now.getMinutes();
+    const totalMinutes = hour * 60 + minutes;
+    
+    // Breakfast: 8:30 – 9:30, Lunch: 12:30 – 1:30
+    if (totalMinutes < 510) return 'breakfast (8:30 – 9:30 AM)';
+    if (totalMinutes < 750) return 'lunch (12:30 – 1:30 PM)';
+    return 'breakfast (8:30 – 9:30 AM)'; // Next day
+  };
+
   const handleFeedbackAnswer = (questionKey: string, answer: string) => {
     const updatedFeedbackData = { ...feedbackData, [questionKey]: answer };
     setFeedbackData(updatedFeedbackData);
+    setAnsweredQuestions(prev => new Set([...prev, feedbackStep - 1]));
 
     // Add user response
     const userResponse: ChatMessage = {
@@ -456,11 +470,13 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
 
   const completeFeedback = () => {
     setTimeout(() => {
+      const nextMeal = getNextMealTime();
+      
       const completionMessage: ChatMessage = {
         id: `msg_${Date.now()}_completion`,
         type: 'completion',
         content: {
-          text: t('feedbackSaved', 'Thank you! Your feedback has been saved successfully. 🙏'),
+          text: `${t('feedbackSaved', 'Thank you! Your feedback has been saved successfully.')} ${t('seeYouAt', 'See you at')} ${nextMeal} 🙏`,
         },
         timestamp: new Date(),
       };
@@ -716,18 +732,29 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                     {message?.content?.text}
                   </p>
                   <div className="flex flex-col gap-2 mt-3">
-                    {message?.content?.options?.map((option) => (
-                      <Button
-                        key={option.value}
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 bg-background/80 hover:bg-primary hover:text-primary-foreground flex items-center justify-start gap-1 px-2 py-1"
-                        onClick={() => handleFeedbackAnswer(message?.content?.questionKey, option.label)}
-                      >
-                        {option.icon && <span>{option.icon}</span>}
-                        <span>{option.label}</span>
-                      </Button>
-                    ))}
+                    {message?.content?.options?.map((option) => {
+                      const messageIndex = messages.findIndex(msg => msg.id === message.id);
+                      const questionIndex = feedbackQuestions.findIndex(q => q.key === message?.content?.questionKey);
+                      const isAnswered = answeredQuestions.has(questionIndex);
+                      
+                      return (
+                        <Button
+                          key={option.value}
+                          size="sm"
+                          variant="outline"
+                          disabled={isAnswered}
+                          className={`flex-1 flex items-center justify-start gap-1 px-2 py-1 ${
+                            isAnswered 
+                              ? 'opacity-50 cursor-not-allowed bg-muted' 
+                              : 'bg-background/80 hover:bg-primary hover:text-primary-foreground'
+                          }`}
+                          onClick={() => handleFeedbackAnswer(message?.content?.questionKey, option.label)}
+                        >
+                          {option.icon && <span>{option.icon}</span>}
+                          <span>{option.label}</span>
+                        </Button>
+                      );
+                    })}
                   </div>
                   <div className="flex items-center justify-start mt-2">
                     <span className="text-xs text-muted-foreground">

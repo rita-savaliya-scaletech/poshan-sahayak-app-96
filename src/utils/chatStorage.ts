@@ -12,7 +12,7 @@ export interface ChatSession {
   date: string;
   analysisResult?: unknown;
   questionnaireData?: unknown;
-  status: 'completed' | 'pending';
+  status: 'completed' | 'pending' | 'missed';
   createdAt: Date;
   completedAt?: Date;
 }
@@ -21,9 +21,12 @@ const STORAGE_KEY = 'poshan_chat_history';
 
 export const saveChatSession = (session: ChatSession): void => {
   try {
-    const existingHistory = getChatHistory();
-    const updatedHistory = [session, ...existingHistory.filter((s) => s.id !== session.id)];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
+    // Only save sessions that have completed feedback or missed their time window
+    if (session.status === 'completed' || session.status === 'missed') {
+      const existingHistory = getChatHistory();
+      const updatedHistory = [session, ...existingHistory.filter((s) => s.id !== session.id)];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
+    }
   } catch (error) {
     console.error('Failed to save chat session:', error);
   }
@@ -35,15 +38,18 @@ export const getChatHistory = (): ChatSession[] => {
     if (!stored) return [];
 
     const parsed = JSON.parse(stored);
-    return parsed.map((session) => ({
-      ...session,
-      createdAt: new Date(session.createdAt),
-      completedAt: session.completedAt ? new Date(session.completedAt) : undefined,
-      messages: session.messages.map((msg) => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp),
-      })),
-    }));
+    // Only return completed or missed sessions
+    return parsed
+      .filter((session: ChatSession) => session.status === 'completed' || session.status === 'missed')
+      .map((session: ChatSession) => ({
+        ...session,
+        createdAt: new Date(session.createdAt),
+        completedAt: session.completedAt ? new Date(session.completedAt) : undefined,
+        messages: session.messages.map((msg) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        })),
+      }));
   } catch (error) {
     console.error('Failed to load chat history:', error);
     return [];
