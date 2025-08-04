@@ -21,35 +21,41 @@ const STORAGE_KEY = 'poshan_chat_history';
 
 export const saveChatSession = (session: ChatSession): void => {
   try {
-    // Only save sessions that have completed feedback or missed their time window
-    if (session.status === 'completed' || session.status === 'missed') {
-      const existingHistory = getChatHistory();
-      const updatedHistory = [session, ...existingHistory.filter((s) => s.id !== session.id)];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
-    }
+    const existingHistory = getAllChatSessions(); // Use internal function that gets all sessions
+    const updatedHistory = [session, ...existingHistory.filter((s) => s.id !== session.id)];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
   } catch (error) {
     console.error('Failed to save chat session:', error);
   }
 };
 
-export const getChatHistory = (): ChatSession[] => {
+// Internal function to get all sessions without filtering
+const getAllChatSessions = (): ChatSession[] => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [];
 
     const parsed = JSON.parse(stored);
-    // Only return completed or missed sessions
-    return parsed
-      .filter((session: ChatSession) => session.status === 'completed' || session.status === 'missed')
-      .map((session: ChatSession) => ({
-        ...session,
-        createdAt: new Date(session.createdAt),
-        completedAt: session.completedAt ? new Date(session.completedAt) : undefined,
-        messages: session.messages.map((msg) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        })),
-      }));
+    return parsed.map((session: ChatSession) => ({
+      ...session,
+      createdAt: new Date(session.createdAt),
+      completedAt: session.completedAt ? new Date(session.completedAt) : undefined,
+      messages: session.messages.map((msg) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp),
+      })),
+    }));
+  } catch (error) {
+    console.error('Failed to load all chat sessions:', error);
+    return [];
+  }
+};
+
+export const getChatHistory = (): ChatSession[] => {
+  try {
+    const allSessions = getAllChatSessions();
+    // Only return completed or missed sessions for history display
+    return allSessions.filter((session: ChatSession) => session.status === 'completed' || session.status === 'missed');
   } catch (error) {
     console.error('Failed to load chat history:', error);
     return [];
@@ -58,12 +64,12 @@ export const getChatHistory = (): ChatSession[] => {
 
 export const updateChatSession = (sessionId: string, updates: Partial<ChatSession>): void => {
   try {
-    const history = getChatHistory();
-    const sessionIndex = history.findIndex((s) => s.id === sessionId);
+    const allSessions = getAllChatSessions();
+    const sessionIndex = allSessions.findIndex((s) => s.id === sessionId);
 
     if (sessionIndex !== -1) {
-      history[sessionIndex] = { ...history[sessionIndex], ...updates };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+      allSessions[sessionIndex] = { ...allSessions[sessionIndex], ...updates };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allSessions));
     }
   } catch (error) {
     console.error('Failed to update chat session:', error);
@@ -73,8 +79,8 @@ export const updateChatSession = (sessionId: string, updates: Partial<ChatSessio
 export const getSessionForMealToday = (mealType: 'breakfast' | 'lunch' | 'dinner'): ChatSession | null => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const history = getChatHistory();
-    return history.find(session => 
+    const allSessions = getAllChatSessions(); // Use internal function to get all sessions
+    return allSessions.find(session => 
       session.date === today && 
       session.mealType === mealType && 
       session.status === 'completed'
