@@ -25,7 +25,7 @@ export const useCamera = () => {
       if (image.dataUrl) {
         return {
           dataUrl: image.dataUrl,
-          format: image.format
+          format: image.format,
         };
       }
       return null;
@@ -53,7 +53,7 @@ export const useCamera = () => {
       if (image.dataUrl) {
         return {
           dataUrl: image.dataUrl,
-          format: image.format
+          format: image.format,
         };
       }
       return null;
@@ -69,6 +69,7 @@ export const useCamera = () => {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*';
+      input.capture = 'environment'; // Prefer rear camera on mobile
       input.onchange = (event) => {
         const file = (event.target as HTMLInputElement).files?.[0];
         if (file) {
@@ -76,7 +77,7 @@ export const useCamera = () => {
           reader.onload = () => {
             resolve({
               dataUrl: reader.result as string,
-              format: file.type
+              format: file.type,
             });
           };
           reader.onerror = () => {
@@ -94,17 +95,39 @@ export const useCamera = () => {
 
   const requestPermissions = async () => {
     try {
-      // On web, permissions are handled by browser
+      // On web, we need to request permissions explicitly
       if (Capacitor.getPlatform() === 'web') {
-        return true;
+        // Check if we're in a PWA context
+        const isPWA =
+          window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+
+        if (isPWA) {
+          // For PWA, try to request camera permission through getUserMedia
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach((track) => track.stop()); // Stop the stream immediately
+            return true;
+          } catch (permissionError) {
+            console.error('Camera permission denied:', permissionError);
+            toast.error(
+              'Camera permission is required to take photos. Please allow camera access in your browser settings.'
+            );
+            return false;
+          }
+        } else {
+          // For regular web, permissions are handled by file input
+          return true;
+        }
       }
 
+      // For native platforms, use Capacitor Camera permissions
       const permissions = await Camera.requestPermissions({
-        permissions: ['camera', 'photos']
+        permissions: ['camera', 'photos'],
       });
       return permissions.camera === 'granted' || permissions.photos === 'granted';
     } catch (error) {
       console.error('Permission error:', error);
+      toast.error('Failed to request camera permissions. Please check your device settings.');
       return false;
     }
   };
@@ -112,6 +135,6 @@ export const useCamera = () => {
   return {
     takePicture,
     selectFromGallery,
-    requestPermissions
+    requestPermissions,
   };
 };

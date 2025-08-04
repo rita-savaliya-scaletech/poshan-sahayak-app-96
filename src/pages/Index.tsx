@@ -14,6 +14,7 @@ const Index = () => {
 
   const handleSplashComplete = () => {
     // setAppState('language');
+    localStorage.setItem('language', 'gu');
     setAppState('main');
   };
 

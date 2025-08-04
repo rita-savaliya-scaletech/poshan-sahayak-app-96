@@ -1,25 +1,36 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { User, School, MapPin, Languages, Settings, LogOut, Bell, HelpCircle, Check } from 'lucide-react';
+import HttpService from '@/shared/services/Http.service';
+import { API_CONFIG } from '@/shared/api';
 
 const ProfileScreen = () => {
   const { t, i18n } = useTranslation();
   const [showLanguageDialog, setShowLanguageDialog] = useState(false);
+  const [userDetails, setUserDetails] = useState({
+    id: null,
+    username: '',
+    school: '',
+    location: '',
+  });
+
+  const getUserDetails = async () => {
+    const response = await HttpService.get(`${API_CONFIG.getUserData}/${2}?lang=${i18n.language}`);
+    setUserDetails(response);
+  };
+
+  useEffect(() => {
+    getUserDetails();
+  }, [i18n.language]);
 
   // Mock teacher data - in real app, this would come from authentication
   const teacherData = {
-    name: 'Priya Sharma',
-    id: 'TCH001',
-    school: 'Government Primary School, Sector 15',
-    district: 'Gandhinagar',
-    state: 'Gujarat',
     language: i18n.language === 'gu' ? t('gujarati') : t('english'),
     joinDate: '2023-04-15',
-    totalReports: 45,
+    totalReports: 5,
     rank: 'Senior Teacher',
   };
 
@@ -29,10 +40,10 @@ const ProfileScreen = () => {
   };
 
   const menuItems = [
-    { icon: Languages, label: t('changeLanguage', 'Change Language'), action: () => setShowLanguageDialog(true) },
-    { icon: Bell, label: t('notifications', 'Notifications'), action: () => {} },
-    { icon: HelpCircle, label: t('helpSupport', 'Help & Support'), action: () => {} },
-    { icon: Settings, label: t('settings', 'Settings'), action: () => {} },
+    { icon: Languages, label: t('changeLanguage'), action: () => setShowLanguageDialog(true) },
+    { icon: Bell, label: t('notifications'), action: () => {} },
+    { icon: HelpCircle, label: t('helpSupport'), action: () => {} },
+    { icon: Settings, label: t('settings'), action: () => {} },
   ];
 
   const languages = [
@@ -45,7 +56,7 @@ const ProfileScreen = () => {
       {/* Header - Matching splash screen style */}
       <div className="p-6 bg-white/90 backdrop-blur-sm border-b border-primary/20 shadow-sm">
         <h2 className="text-2xl font-bold text-primary">{t('profile')}</h2>
-        <p className="text-muted-foreground font-medium">Manage your account information</p>
+        <p className="text-muted-foreground font-medium">{t('manageAccountInfo')}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -58,8 +69,8 @@ const ProfileScreen = () => {
                 <User className="w-10 h-10 text-primary" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold text-primary">{teacherData.name}</h3>
-                <p className="text-muted-foreground font-medium">ID: {teacherData.id}</p>
+                <h3 className="text-xl font-bold text-primary">{userDetails.username}</h3>
+                <p className="text-muted-foreground font-medium">ID: {userDetails.id}</p>
                 <Badge variant="secondary" className="bg-primary text-white px-3 py-1 rounded-full shadow-sm">
                   {teacherData.rank}
                 </Badge>
@@ -71,18 +82,16 @@ const ProfileScreen = () => {
               <div className="flex items-center space-x-3">
                 <School className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <p className="font-medium text-foreground">{teacherData.school}</p>
-                  <p className="text-sm text-muted-foreground">School</p>
+                  <p className="font-medium text-foreground">{userDetails.school}</p>
+                  <p className="text-sm text-muted-foreground">{t('school')}</p>
                 </div>
               </div>
 
               <div className="flex items-center space-x-3">
                 <MapPin className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <p className="font-medium text-foreground">
-                    {teacherData.district}, {teacherData.state}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Location</p>
+                  <p className="font-medium text-foreground">{userDetails.location}</p>
+                  <p className="text-sm text-muted-foreground">{t('location')}</p>
                 </div>
               </div>
 
@@ -90,7 +99,7 @@ const ProfileScreen = () => {
                 <Languages className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="font-medium text-foreground">{teacherData.language}</p>
-                  <p className="text-sm text-muted-foreground">Preferred Language</p>
+                  <p className="text-sm text-muted-foreground">{t('preferredLanguage')}</p>
                 </div>
               </div>
             </div>
@@ -99,15 +108,15 @@ const ProfileScreen = () => {
 
         {/* Stats Card - Enhanced style */}
         <Card className="p-6 bg-white/95 backdrop-blur-sm shadow-xl border-2 border-primary/10 rounded-2xl">
-          <h4 className="font-bold mb-4 text-primary">Activity Summary</h4>
+          <h4 className="font-bold mb-4 text-primary">{t('activitySummary')}</h4>
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-4 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl border border-primary/20">
               <p className="text-3xl font-bold text-primary">{teacherData.totalReports}</p>
-              <p className="text-sm text-muted-foreground font-medium">Total Reports</p>
+              <p className="text-sm text-muted-foreground font-medium">{t('totalReports')}</p>
             </div>
             <div className="text-center p-4 bg-gradient-to-br from-secondary/10 to-accent/10 rounded-xl border border-secondary/20">
               <p className="text-3xl font-bold text-secondary">98%</p>
-              <p className="text-sm text-muted-foreground font-medium">Accuracy Rate</p>
+              <p className="text-sm text-muted-foreground font-medium">{t('accuracyRate')}</p>
             </div>
           </div>
         </Card>
@@ -139,11 +148,10 @@ const ProfileScreen = () => {
               <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
                 <div className="text-2xl">🇮🇳</div>
               </div>
-              <h4 className="font-bold text-govt-blue text-lg">Government of Gujarat</h4>
+              <h4 className="font-bold text-govt-blue text-lg">{t('governmentOfGujarat')}</h4>
             </div>
-            <p className="text-sm text-muted-foreground font-medium">Ministry of Education • Sarva Shiksha Abhiyan</p>
-            <p className="text-xs text-muted-foreground">
-              Member since: {new Date(teacherData.joinDate).toLocaleDateString()}
+            <p className="text-sm text-muted-foreground font-medium">
+              {t('ministryOfEducation')} • {t('sarvaShikshaAbhiyan')}
             </p>
           </div>
         </Card>
@@ -154,7 +162,7 @@ const ProfileScreen = () => {
           className="w-full border-2 border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground rounded-xl py-3 font-semibold shadow-lg"
         >
           <LogOut className="w-5 h-5 mr-2" />
-          Sign Out
+          {t('signOut')}
         </Button> */}
       </div>
 
@@ -164,7 +172,7 @@ const ProfileScreen = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center text-primary">
               <Languages className="w-5 h-5 mr-2" />
-              Choose Language
+              {t('chooseLanguage')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">

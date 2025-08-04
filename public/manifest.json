@@ -18,7 +18,7 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.png", 
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -32,11 +32,8 @@
       "form_factor": "narrow"
     }
   ],
-  "features": [
-    "cross-platform",
-    "offline-capable",
-    "camera-access"
-  ],
+  "features": ["cross-platform", "offline-capable", "camera-access", "geolocation"],
+  "permissions": ["camera", "geolocation", "location"],
   "related_applications": [],
   "prefer_related_applications": false
 }

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Camera, CheckCircle } from 'lucide-react';
@@ -12,7 +12,12 @@ import {
   getSessionForMealToday,
   type ChatSession,
   type ChatMessage,
+  updateChatSession,
 } from '@/utils/chatStorage';
+import HttpService from '@/shared/services/Http.service';
+import { API_CONFIG } from '@/shared/api';
+import { Capacitor } from '@capacitor/core';
+import { getPWAContext, requestLocationPermission, showPermissionInstructions } from '@/utils/pwaUtils';
 
 // --- Types ---
 export interface MenuItem {
@@ -123,26 +128,52 @@ const useMealQuestionnaireQuestions = () => {
 
 const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const webcamRef = useRef<Webcam>(null);
+  const mealType = getMealTypeFromTime();
   const { t } = useTranslation();
-  const { selectFromGallery, requestPermissions } = useCamera();
+  const { requestPermissions } = useCamera();
+  const { i18n } = useTranslation();
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [locationName, setLocationName] = useState<string>('');
-  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [cameraPermission, setCameraPermission] = useState(true);
+
+  // Feedback flow state
+  const [feedbackStep, setFeedbackStep] = useState(0);
+  const [feedbackData, setFeedbackData] = useState({});
+  const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
 
   // Detect location on mount
   useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          setCoords({
-            lat: position.coords.latitude,
-            lon: position.coords.longitude,
+    const detectLocation = async () => {
+      const context = getPWAContext();
+
+      if ('geolocation' in navigator) {
+        try {
+          if (context.isPWA) {
+            // For PWA, show a toast to inform user about location permission
+            toast.info(t('locationAccessNeeded'));
+          }
+
+          const hasPermission = await requestLocationPermission();
+
+          if (!hasPermission) {
+            toast.error(showPermissionInstructions('location'));
+            setLocationName(t('locationPermissionDenied'));
+            return;
+          }
+
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 60000,
+            });
           });
+
           // Reverse geocode
           try {
             const res = await fetch(
@@ -150,15 +181,42 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
             );
             const data = await res.json();
             setLocationName(data.display_name || '');
-          } catch {
-            setLocationName('');
+            toast.success(t('locationDetectedSuccess'));
+          } catch (geocodeError) {
+            console.error('Geocoding error:', geocodeError);
+            setLocationName(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
           }
-        },
-        () => setLocationName(''),
-        { enableHighAccuracy: true }
-      );
-    }
-  }, []);
+        } catch (locationError) {
+          console.error('Location error:', locationError);
+          const error = locationError as GeolocationPositionError;
+
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              toast.error(showPermissionInstructions('location'));
+              setLocationName(t('locationPermissionDenied'));
+              break;
+            case error.POSITION_UNAVAILABLE:
+              toast.error(t('locationUnavailable'));
+              setLocationName(t('locationUnavailable'));
+              break;
+            case error.TIMEOUT:
+              toast.error(t('locationTimeout'));
+              setLocationName(t('locationTimeout'));
+              break;
+            default:
+              toast.error(t('locationError'));
+              setLocationName(t('locationError'));
+          }
+        }
+      } else {
+        console.warn('Geolocation is not supported by this browser');
+        setLocationName(t('locationNotSupported'));
+        toast.info(t('locationServicesUnavailable'));
+      }
+    };
+
+    detectLocation();
+  }, [t]);
 
   // Memoize menu for performance
   const todaysMenu = useMemo<MenuItem[]>(
@@ -177,39 +235,60 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
 
   // Simulate conversation on load
   useEffect(() => {
-    const mealType = getMealTypeFromTime();
-    
-    // Check if user already completed feedback for this meal today
-    if (mealType) {
-      const existingSession = getSessionForMealToday(mealType);
-      if (existingSession) {
-        // Show "already completed" message
-        const nextMealTime = getNextMealTime();
-        const alreadyCompletedMessage: ChatMessage = {
-          id: `msg_${Date.now()}`,
-          type: 'completion',
-          content: {
-            text: `${t('alreadyCompleted', 'You have already completed')} ${t(mealType)} ${t('feedbackToday', 'feedback today')}. ${t('seeYouAt', 'See you at')} ${nextMealTime} 😊`,
-          },
-          timestamp: new Date(),
-        };
-        setMessages([alreadyCompletedMessage]);
-        return;
-      }
+    // Get next meal time for message
+    const nextMealTime = getNextMealTime();
+
+    // If outside meal time OR already completed for this meal, show "See you at next meal" message
+    if (!mealType) {
+      const seeYouMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        type: 'completion',
+        content: {
+          text: t('seeYouAtNextMeal', { nextMeal: nextMealTime }),
+        },
+        timestamp: new Date(),
+      };
+      setMessages([seeYouMessage]);
+      setCurrentSession(null);
+      return;
+    }
+
+    const existingSession = getSessionForMealToday(mealType);
+    if (existingSession && existingSession.status === 'completed') {
+      const alreadyCompletedMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        type: 'completion',
+        content: {
+          text: t('seeYouAtNextMeal', { nextMeal: nextMealTime }),
+        },
+        timestamp: new Date(),
+      };
+      setMessages([alreadyCompletedMessage]);
+      setCurrentSession(existingSession);
+      return;
     }
 
     // If no existing session or outside meal time, start normal flow
     const sessionId = generateSessionId();
 
+    // Helper to get dynamic greeting
+    const getDynamicGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour < 12) return t('goodMorning');
+      if (hour < 17) return t('goodAfternoon');
+      return t('goodEvening');
+    };
+
+    // ...inside your useEffect or wherever you create the greeting message:
     const greeting: ChatMessage = {
       id: `msg_${Date.now()}`,
       type: 'system',
       content: {
         text: t('greetingFull', {
-          greeting: t('goodMorning'),
+          greeting: getDynamicGreeting(),
           help: t('greetingHelp'),
           question: t('whatDidYouHave'),
-          meal: t(mealType || 'meal'),
+          meal: t(mealType),
         }),
       },
       timestamp: new Date(),
@@ -271,33 +350,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     </div>
   );
 
-  // Mock AI analysis function
-  const analyzeImage = async (imageFile: File): Promise<AnalysisResult> => {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    return {
-      itemsFood: ['Poha', 'Banana', 'Milk', 'jalebi'],
-      inputMenu: ['jalebi'],
-      foundItems: ['jalebi'],
-      missingItems: [],
-      nutritions: {
-        Poha: {
-          calories: 'approximately 400-500 kcal per 100g',
-          protein: '7-10g',
-          fat: '20-30g',
-          carbs: '50-60g',
-        },
-        Banana: {
-          calories: 'about 20 kcal per 100g',
-          protein: '0.9g',
-          fat: '0.2g',
-          carbs: '4.3g',
-        },
-        Milk: {},
-      },
-    };
-  };
-
   const handleImageUpload = async (imageData: string) => {
     setIsTyping(true);
     // Add user message with image
@@ -326,8 +378,18 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       const response = await fetch(imageData);
       const blob = await response.blob();
       const file = new File([blob], 'food-image.jpg', { type: 'image/jpeg' });
+      const menuNames = todaysMenu.map((item) => item.name);
 
-      const result = await analyzeImage(file);
+      // Create FormData for the API call
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('menu', JSON.stringify(menuNames));
+      formData.append('lang', i18n.language || 'gu');
+
+      // Make the API call with form-data
+      const result = await HttpService.post(API_CONFIG.uploadFoodPhoto, formData, {
+        contentType: 'multiparts/form-data',
+      });
 
       setIsTyping(false);
 
@@ -352,7 +414,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
         saveChatSession(updatedSession);
       }
 
-      toast.success('Image analysis completed!');
+      toast.success(t('imageAnalysisCompleted'));
 
       setTimeout(() => {
         setIsTyping(false);
@@ -361,7 +423,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       }, 1000);
     } catch (error) {
       setIsTyping(false);
-      toast.error('Failed to analyze image. Please try again.');
+      toast.error(t('imageAnalysisFailed'));
     } finally {
       setIsTyping(false);
     }
@@ -376,32 +438,42 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     }
   };
 
-  // Camera-only photo capture for food prompt
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      handleImageUpload(imageUrl);
+  const handleOpenCamera = async () => {
+    try {
+      const context = getPWAContext();
+      const hasPermission = await requestPermissions();
+      setCameraPermission(hasPermission);
+
+      if (hasPermission) {
+        if (context.isPWA && context.platform === 'web') {
+          // For PWA on web, use file input with camera capture
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.capture = 'environment';
+          input.onchange = async (event) => {
+            const file = (event.target as HTMLInputElement).files?.[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = () => {
+                handleImageUpload(reader.result as string);
+              };
+              reader.readAsDataURL(file);
+            }
+          };
+          input.click();
+        } else {
+          // For native or regular web, show camera modal
+          setShowCamera(true);
+        }
+      } else {
+        toast.error(showPermissionInstructions('camera'));
+      }
+    } catch (error) {
+      console.error('Camera open error:', error);
+      toast.error(t('cameraOpenFailed'));
     }
   };
-
-  const handleGallerySelect = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) {
-      fileInputRef.current?.click();
-      return;
-    }
-
-    const result = await selectFromGallery();
-    if (result?.dataUrl) {
-      handleImageUpload(result.dataUrl);
-    }
-  };
-
-  // Feedback flow state
-  const [feedbackStep, setFeedbackStep] = useState(0);
-  const [feedbackData, setFeedbackData] = useState({});
-  const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
 
   const feedbackQuestions = useMealQuestionnaireQuestions();
 
@@ -415,7 +487,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
           id: `msg_${Date.now()}_feedback_start`,
           type: 'system',
           content: {
-            text: t('feedbackIntro', "Now I have a few quick questions about your meal experience. Let's start:"),
+            text: t('feedbackIntro'),
           },
           timestamp: new Date(),
         };
@@ -466,17 +538,17 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     const hour = now.getHours();
     const minutes = now.getMinutes();
     const totalMinutes = hour * 60 + minutes;
-    
+
     // Breakfast: 8:30 – 9:30, Lunch: 12:30 – 1:30
-    if (totalMinutes < 510) return 'breakfast (8:30 – 9:30 AM)';
-    if (totalMinutes < 750) return 'lunch (12:30 – 1:30 PM)';
-    return 'breakfast (8:30 – 9:30 AM)'; // Next day
+    if (totalMinutes < 510) return `${t('breakfast')} (8:30 – 9:30 AM)`;
+    if (totalMinutes < 750) return `${t('lunch')} (12:30 – 1:30 PM)`;
+    return `${t('breakfast')} (8:30 – 9:30 AM)`; // Next day
   };
 
   const handleFeedbackAnswer = (questionKey: string, answer: string) => {
     const updatedFeedbackData = { ...feedbackData, [questionKey]: answer };
     setFeedbackData(updatedFeedbackData);
-    setAnsweredQuestions(prev => new Set([...prev, feedbackStep - 1]));
+    setAnsweredQuestions((prev) => new Set([...prev, feedbackStep - 1]));
 
     // Add user response
     const userResponse: ChatMessage = {
@@ -492,13 +564,11 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
 
   const completeFeedback = () => {
     setTimeout(() => {
-      const nextMeal = getNextMealTime();
-      
       const completionMessage: ChatMessage = {
         id: `msg_${Date.now()}_completion`,
         type: 'completion',
         content: {
-          text: `${t('feedbackSaved', 'Thank you! Your feedback has been saved successfully.')} ${t('seeYouAt', 'See you at')} ${nextMeal} 🙏`,
+          text: t('feedbackSubmittedSuccess'),
         },
         timestamp: new Date(),
       };
@@ -514,13 +584,20 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
         };
         setCurrentSession(completedSession);
         saveChatSession(completedSession);
+
+        updateChatSession(completedSession.id, {
+          status: 'completed',
+          completedAt: new Date(),
+          questionnaireData: feedbackData,
+          messages: [...messages, completionMessage],
+        });
       }
 
-      toast.success(t('feedbackSubmitted', 'Feedback submitted successfully!'));
+      toast.success(t('feedbackSubmitted'));
 
       setTimeout(() => {
         onNavigateToHistory?.();
-        toast.success(t('redirectingToHistory', 'Redirecting to history dashboard...'));
+        toast.success(t('redirectingToHistory'));
       }, 2000);
     }, 500);
   };
@@ -534,8 +611,8 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
             <span className="text-lg">🥗</span>
           </div>
           <div>
-            <h1 className="font-semibold">{t('appName', 'Poshan Tracker')}</h1>
-            <p className="text-sm opacity-90">{t('nutritionAssistant', 'Nutrition Assistant')}</p>
+            <h1 className="font-semibold">AI Poshan Tracker</h1>
+            <p className="text-sm opacity-90">{t('nutritionAssistant')}</p>
           </div>
         </div>
       </div>
@@ -544,6 +621,11 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       {showCamera && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
           <div className="bg-white p-4 rounded-lg flex flex-col items-center">
+            {!cameraPermission && (
+              <p className="text-xs text-red-600 mb-2">
+                {t('cameraPermissionDenied', 'Camera permission denied. Please allow camera access to continue.')}
+              </p>
+            )}
             <Webcam
               audio={false}
               ref={webcamRef}
@@ -562,254 +644,243 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       )}
 
       {/* Chat Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-background to-muted/20">
-        {messages.map((message, index) => (
-          <div key={index}>
-            {message.type === 'user' && (
-              <div className="flex justify-end mb-3">
-                {message?.content?.image ? (
-                  <div className="message-bubble-user">
-                    <img
-                      src={message?.content?.image}
-                      alt="Food upload"
-                      className="w-48 h-36 object-cover rounded-lg mb-2"
-                    />
-                    <p className="text-xs opacity-75">📸 Photo</p>
-                    <div className="flex items-center justify-end mt-1 space-x-1">
-                      <span className="text-xs opacity-75">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      <CheckCircle className="w-3 h-3 opacity-75" />
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 bg-gradient-to-b from-background to-muted/20">
+        {messages.map((message, index) => {
+          return (
+            <div key={index}>
+              {message.type === 'user' && (
+                <div className="flex justify-end mb-3">
+                  {message?.content?.image ? (
+                    <div className="message-bubble-user">
+                      <img
+                        src={message?.content?.image}
+                        alt="Food upload"
+                        className="w-48 h-36 object-cover rounded-lg mb-2"
+                      />
+                      <p className="text-xs opacity-75">📸 Photo</p>
+                      <div className="flex items-center justify-end mt-1 space-x-1">
+                        <span className="text-xs opacity-75">
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <CheckCircle className="w-3 h-3 opacity-75" />
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="message-bubble-user">
-                    <p>{message?.content?.text}</p>
-                    <div className="flex items-center justify-end mt-1 space-x-1">
-                      <span className="text-xs opacity-75">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      <CheckCircle className="w-3 h-3 opacity-75" />
+                  ) : (
+                    <div className="message-bubble-user">
+                      <p>{message?.content?.text}</p>
+                      <div className="flex items-center justify-end mt-1 space-x-1">
+                        <span className="text-xs opacity-75">
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <CheckCircle className="w-3 h-3 opacity-75" />
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
 
-            {/* Menu Card with location, date, meal type */}
-            {message.type === 'menu_card' && (
-              <div className="flex justify-start mb-3">
-                <div className="message-bubble-ai rounded-xl p-4 shadow max-w-xs">
-                  <div className="mb-2 font-semibold">
-                    <span>{t('todaysMenu', "Today's Menu")}</span>
-                  </div>
-                  <div className="mb-2 text-xs text-muted-foreground">
-                    <div>
-                      <span>
-                        {t('date', 'Date')}: {new Date().toLocaleDateString()}
-                      </span>
+              {/* Menu Card with location, date, meal type */}
+              {message.type === 'menu_card' && (
+                <div className="flex justify-start mb-3">
+                  <div className="message-bubble-ai rounded-xl p-4 shadow max-w-xs">
+                    <div className="mb-2 font-semibold">
+                      <h4 className="font-semibold text-sm mb-2">📋 {t('todaysMenu', { meal: t(mealType) })}</h4>
                     </div>
-                    <div>
-                      <span>{t('mealType', 'Meal Type')}: Breakfast</span>
-                    </div>
-                    <div>
-                      <span>
-                        {t('location', 'Location')}: {locationName || t('detectingLocation', 'Detecting...')}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mb-3">
-                    {message?.content?.menu.map((item: MenuItem, idx: number) => (
-                      <div key={idx} className="flex items-center text-sm mb-1">
-                        <span className="mr-2">{item.emoji}</span>
-                        <span>
-                          {item.name} - {item.quantity}
-                          {t('gram')}
+                    <div className="mb-2 text-xs text-muted-foreground">
+                      <div>
+                        <span className="font-medium">
+                          {t('date')}: {new Date().toLocaleDateString()}
                         </span>
                       </div>
-                    ))}
-                  </div>
-                  <div className="text-right text-xs text-gray-400 mt-1">
-                    {message?.content?.time
-                      ? new Date(message?.content?.time).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : ''}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {(message.type === 'system' || message.type === 'completion') && (
-              <div className="flex justify-start mb-3">
-                <div className="message-bubble-ai">
-                  <p>{message?.content?.text || message?.content?.greeting}</p>
-
-                  {/* Show green upload button only for aiPhotoPrompt */}
-                  {message?.content?.text ===
-                    t(
-                      'aiPhotoPrompt',
-                      'Can you take a photo of your meal so I can analyze the nutritional content? 📸'
-                    ) && (
-                    <Button
-                      className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg mt-3"
-                      onClick={() => setShowCamera(true)}
-                    >
-                      <Camera className="w-5 h-5" />
-                      <span>{t('uploadPhoto', 'Upload Photo')}</span>
-                    </Button>
-                  )}
-
-                  {/* ...existing menu rendering... */}
-                  {message?.content?.showMenu && message?.content?.menu && (
-                    <div className="mt-3 bg-background/80 rounded-lg p-3 border border-border/50">
-                      <h4 className="font-semibold text-sm mb-2">📋 {t('todaysMenu', "Today's Meal Menu:")}</h4>
-                      <div className="space-y-2">
-                        {message?.content?.menu.map((item: MenuItem, idx: number) => (
-                          <div key={idx} className="flex items-center justify-between text-sm">
-                            <span className="flex items-center">
-                              <span className="mr-2">{item.emoji}</span>
-                              {item.name}
-                            </span>
-                            <span className="text-muted-foreground">{item.quantity}</span>
-                          </div>
-                        ))}
+                      <div>
+                        <span className="font-medium">
+                          {t('mealType')}: {t(mealType)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium">
+                          {t('location')}: {locationName || t('detectingLocation', 'Detecting...')}
+                        </span>
                       </div>
                     </div>
-                  )}
-
-                  <div className="flex items-center justify-start mt-1">
-                    <span className="text-xs text-muted-foreground">
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {message.type === 'analysis' && (
-              <div className="flex justify-start mb-3">
-                <div className="message-bubble-ai max-w-[85%]">
-                  <div className="space-y-3">
-                    <p className="font-semibold text-success">✅ {t('analysisComplete', 'Analysis Complete')}!</p>
-
-                    <div className="bg-success/10 p-3 rounded-lg">
-                      <p className="text-sm font-medium text-success mb-2">{t('itemsFound', 'Items Found')}:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {message?.content?.foundItems.map((item: string, idx: number) => (
-                          <span key={idx} className="bg-success text-white text-xs px-2 py-1 rounded-full">
-                            {item}
+                    <div className="mb-3">
+                      {message?.content?.menu.map((item: MenuItem, idx: number) => (
+                        <div key={idx} className="flex items-center text-sm mb-1">
+                          <span className="mr-2">{item.emoji}</span>
+                          <span>
+                            {item.name} - {item.quantity} {t('gram')}
                           </span>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
+                    <div className="text-right text-xs text-gray-400 mt-1">
+                      {message?.content?.time
+                        ? new Date(message?.content?.time).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : ''}
+                    </div>
+                  </div>
+                </div>
+              )}
 
-                    {message?.content?.missingItems.length > 0 && (
-                      <div className="bg-destructive/10 p-3 rounded-lg">
-                        <p className="text-sm font-medium text-destructive mb-2">
-                          {t('missingItems', 'Missing Items')}:
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {message?.content?.missingItems.map((item: string, idx: number) => (
-                            <span key={idx} className="bg-destructive text-white text-xs px-2 py-1 rounded-full">
-                              {item}
-                            </span>
+              {(message.type === 'system' || message.type === 'completion') && (
+                <div className="flex justify-start mb-3">
+                  <div className="message-bubble-ai">
+                    <p>{message?.content?.text || message?.content?.greeting}</p>
+
+                    {/* Show green upload button only for aiPhotoPrompt */}
+                    {message?.content?.text === t('aiPhotoPrompt') && (
+                      <Button
+                        className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg mt-3"
+                        onClick={handleOpenCamera}
+                      >
+                        <Camera className="w-5 h-5" />
+                        <span>{t('uploadPhoto')}</span>
+                      </Button>
+                    )}
+
+                    {/* ...existing menu rendering... */}
+                    {message?.content?.showMenu && message?.content?.menu && (
+                      <div className="mt-3 bg-background/80 rounded-lg p-3 border border-border/50">
+                        <h4 className="font-semibold text-sm mb-2">📋 {t('todaysMenu', { meal: t(mealType) })}</h4>
+                        <div className="space-y-2">
+                          {message?.content?.menu.map((item: MenuItem, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between text-sm">
+                              <span className="flex items-center">
+                                <span className="mr-2">{item.emoji}</span>
+                                {item.name}
+                              </span>
+                              <span className="text-muted-foreground">{item.quantity}</span>
+                            </div>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    <div className="bg-primary/10 p-3 rounded-lg">
-                      <p className="text-sm font-medium text-primary mb-2">{t('nutritionInfo', 'Nutrition Info')}:</p>
-                      <div className="space-y-2 text-xs">
-                        {Object.entries(message?.content?.nutritions).map(([food, nutrition], idx) => (
-                          <div key={idx} className="bg-background/80 p-2 rounded">
-                            <p className="font-medium capitalize">{food}</p>
-                            {nutrition &&
-                              typeof nutrition === 'object' &&
-                              'calories' in nutrition &&
-                              nutrition.calories && (
-                                <p className="text-muted-foreground">📊 {String(nutrition.calories)}</p>
-                              )}
+                    <div className="flex items-center justify-start mt-1">
+                      <span className="text-xs text-muted-foreground">
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {message.type === 'analysis' && (
+                <div className="flex justify-start mb-3">
+                  <div className="message-bubble-ai max-w-[85%]">
+                    <div className="space-y-3">
+                      {message?.content?.found_items.length > 0 && (
+                        <>
+                          <p className="font-semibold text-success">✅ {t('analysisComplete')}!</p>
+                          <div className="bg-success/10 p-3 rounded-lg">
+                            <p className="text-sm font-medium text-success mb-2">{t('itemsFound')}:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {message?.content?.found_items?.map((item: string, idx: number) => (
+                                <span key={idx} className="bg-success text-white text-xs px-2 py-1 rounded-full">
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        ))}
-                      </div>
+                        </>
+                      )}
+
+                      {message?.content?.nutritions.length > 0 && (
+                        <div className="bg-primary/10 p-3 rounded-lg space-y-2 text-xs">
+                          {Object.entries(message?.content?.nutritions).map(([food, nutrition], idx) => (
+                            <div key={idx} className="bg-background/80 p-2 rounded">
+                              <p className="font-medium capitalize">{food}</p>
+                              {nutrition &&
+                                typeof nutrition === 'object' &&
+                                'calories' in nutrition &&
+                                nutrition.calories && (
+                                  <p className="text-muted-foreground">📊 {String(nutrition.calories)}</p>
+                                )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {message?.content?.missing_items.length > 0 && (
+                        <div className="bg-destructive/10 p-3 rounded-lg">
+                          <p className="text-sm font-medium text-destructive mb-2">{t('missingItems')}:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {message?.content?.missing_items.map((item: string, idx: number) => (
+                              <span key={idx} className="bg-destructive text-white text-xs px-2 py-1 rounded-full">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {message?.content?.found_items.length === 0 && (
+                        <div className="bg-destructive/10 p-3 rounded-lg">
+                          <div className="flex flex-wrap gap-1">
+                            <span className="bg-destructive text-white text-sm px-2 py-1 rounded-full">
+                              {message?.content?.items_food[0]}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-start mt-2">
+                      <span className="text-xs text-muted-foreground">
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-start mt-2">
-                    <span className="text-xs text-muted-foreground">
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {message.type === 'feedback_question' && (
-              <div className="flex justify-start mb-3">
-                <div className="message-bubble-ai">
-                  <p>
-                    {message?.content?.icon && <span className="mr-2">{message?.content?.icon}</span>}
-                    {message?.content?.text}
-                  </p>
-                  <div className="flex flex-col gap-2 mt-3">
-                    {message?.content?.options?.map((option) => {
-                      const messageIndex = messages.findIndex(msg => msg.id === message.id);
-                      const questionIndex = feedbackQuestions.findIndex(q => q.key === message?.content?.questionKey);
-                      const isAnswered = answeredQuestions.has(questionIndex);
-                      
-                      return (
-                        <Button
-                          key={option.value}
-                          size="sm"
-                          variant="outline"
-                          disabled={isAnswered}
-                          className={`flex-1 flex items-center justify-start gap-1 px-2 py-1 ${
-                            isAnswered 
-                              ? 'opacity-50 cursor-not-allowed bg-muted' 
-                              : 'bg-background/80 hover:bg-primary hover:text-primary-foreground'
-                          }`}
-                          onClick={() => handleFeedbackAnswer(message?.content?.questionKey, option.label)}
-                        >
-                          {option.icon && <span>{option.icon}</span>}
-                          <span>{option.label}</span>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  <div className="flex items-center justify-start mt-2">
-                    <span className="text-xs text-muted-foreground">
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+              {message.type === 'feedback_question' && (
+                <div className="flex justify-start mb-3">
+                  <div className="message-bubble-ai">
+                    <p>
+                      {message?.content?.icon && <span className="mr-2">{message?.content?.icon}</span>}
+                      {message?.content?.text}
+                    </p>
+                    <div className="flex flex-col gap-2 mt-3">
+                      {message?.content?.options?.map((option) => {
+                        const messageIndex = messages.findIndex((msg) => msg.id === message.id);
+                        const questionIndex = feedbackQuestions.findIndex(
+                          (q) => q.key === message?.content?.questionKey
+                        );
+                        const isAnswered = answeredQuestions.has(questionIndex);
 
-            {message.type === 'questionnaire' && (
-              <div className="flex justify-end mb-3">
-                <div className="message-bubble-user max-w-[80%]">
-                  <div className="space-y-2">
-                    <p className="font-semibold">📝 Feedback Submitted</p>
-                    <div className="space-y-1 text-sm">
-                      <p>Freshness: {message?.content?.freshness}</p>
-                      <p>Quantity: {message?.content?.quantity}</p>
-                      <p>Satisfaction: {message?.content?.satisfaction}</p>
-                      {message?.content?.comments && <p>Comments: {message?.content?.comments}</p>}
+                        return (
+                          <Button
+                            key={option.value}
+                            size="sm"
+                            variant="outline"
+                            disabled={isAnswered}
+                            className={`flex-1 flex items-center justify-start gap-1 px-2 py-1 ${
+                              isAnswered
+                                ? 'opacity-50 cursor-not-allowed bg-muted'
+                                : 'bg-background/80 hover:bg-primary hover:text-primary-foreground'
+                            }`}
+                            onClick={() => handleFeedbackAnswer(message?.content?.questionKey, option.label)}
+                          >
+                            {option.icon && <span>{option.icon}</span>}
+                            <span>{option.label}</span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center justify-start mt-2">
+                      <span className="text-xs text-muted-foreground">
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-end mt-1">
-                    <span className="text-xs opacity-75">
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <CheckCircle className="w-3 h-3 opacity-75 ml-1" />
-                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
 
         {/* Typing Indicator */}
         {isTyping && <TypingIndicator />}

@@ -21,7 +21,10 @@ const resources = {
       goodEvening: 'Good Evening',
       greetingHelp: "I'm here to help track your meals today.",
       greetingFull: '{{greeting}}! 👋 {{help}} {{question}} {{meal}}?', // <-- Add this line
-
+      date: 'Date',
+      mealType: 'Meal Type',
+      location: 'Location',
+      uploadPhoto: 'Upload Photo',
       // Chat Interface
       todaysMenu: "Today's meal Menu",
       uploadFoodImage: 'Upload Food Image',
@@ -50,6 +53,7 @@ const resources = {
       carbs: 'Carbs',
 
       // Profile
+      school: 'School',
       teacherName: 'Teacher Name',
       schoolName: 'School Name',
       district: 'District',
@@ -61,6 +65,23 @@ const resources = {
       // Navigation & Feedback
       feedbackSaved: 'Thank you! Your feedback has been saved successfully.',
       redirectingToHistory: 'Redirecting to history dashboard...',
+      seeYouAtNextMeal: 'See you at {{nextMeal}} - Ready to track more healthy choices! 📊',
+      feedbackSubmittedSuccess:
+        'Thank you! Your feedback has been saved successfully. Keep nourishing those bright minds! 🧠💪',
+
+      // Toast Messages
+      locationAccessNeeded:
+        'Location access is needed to provide better service. Please allow location access when prompted.',
+      locationDetectedSuccess: 'Location detected successfully!',
+      locationPermissionDenied: 'Location access denied',
+      locationUnavailable: 'Location unavailable',
+      locationTimeout: 'Location timeout',
+      locationError: 'Location error',
+      locationNotSupported: 'Location not supported',
+      locationServicesUnavailable: 'Location services are not available in your browser.',
+      imageAnalysisCompleted: 'Image analysis completed!',
+      imageAnalysisFailed: 'Failed to analyze image. Please try again.',
+      cameraOpenFailed: 'Failed to open camera. Please try again.',
 
       // AI Messages
       great: 'Great',
@@ -107,23 +128,58 @@ const resources = {
       notTasty: 'Not tasty',
       tooMuch: 'Too much',
       totalReports: 'Total Reports',
-      sampleUserMenu: 'Today’s menu includes poha, some jalebi, and a glass of milk.',
+      sampleUserMenu: "Today's menu includes poha, some jalebi, and a glass of milk.",
       aiPhotoPrompt: 'Can you take a photo of your meal so I can analyze the nutritional content? 📸',
       nutritionAssistant: 'Nutrition Assistant',
       tuverDalKhichdi: 'Tuver dal khichdi',
       golVadiFadaLapsi: 'Gol vadi fada lapsi',
       seasonalGreenVegetables: 'Seasonal green vegetables',
       gallery: 'Gallery',
-        selectPhotoPrompt: 'Select a photo to continue...',
-        alreadySubmitted: 'You have already submitted your response for {{meal}}.',
-        feedbackComplete: "Thank you for your feedback!",
-        seeYouAt: "See you at",
-        alreadyCompleted: "You have already completed",
-        feedbackToday: "feedback today",
-        foundFromMenu: "Found from today's menu",
-        allDetectedItems: "All detected food items", 
-        nutritionHighlights: "Nutrition highlights",
-        totalItems: "total items",
+      selectPhotoPrompt: 'Select a photo to continue...',
+      alreadySubmitted: 'You have already submitted your response for {{meal}}.',
+      feedbackComplete: 'Thank you for your feedback!',
+      seeYouAt: 'See you at',
+      alreadyCompleted: 'You have already completed',
+      feedbackToday: 'feedback today',
+      foundFromMenu: "Found from today's menu",
+      allDetectedItems: 'All detected food items',
+      nutritionHighlights: 'Nutrition highlights',
+      totalItems: 'total items',
+
+      // History Dashboard
+      trackProgress: 'Track your meal reporting progress',
+      filters: 'Filters',
+      selectDate: 'Select date range',
+      allTime: 'All time',
+      today: 'Today',
+      thisWeek: 'This week',
+      thisMonth: 'This month',
+      selectMeal: 'Select meal type',
+      allMeals: 'All meals',
+      sessionHistory: 'Session History',
+      sessions: 'sessions',
+      noSessionsFound: 'No sessions found',
+      completed: 'Completed',
+      pending: 'Pending',
+      freshness: 'Freshness',
+      quantity: 'Quantity',
+      satisfaction: 'Satisfaction',
+      completionRate: 'Completion Rate',
+      studentsServed: 'Students Served',
+
+      // Profile Screen
+      manageAccountInfo: 'Manage your account information',
+      preferredLanguage: 'Preferred Language',
+      activitySummary: 'Activity Summary',
+      accuracyRate: 'Accuracy Rate',
+      chooseLanguage: 'Choose Language',
+      signOut: 'Sign Out',
+      governmentOfGujarat: 'Government of Gujarat',
+      ministryOfEducation: 'Ministry of Education',
+      sarvaShikshaAbhiyan: 'Sarva Shiksha Abhiyan',
+
+      // Splash Screen
+      gujaratEducationDepartment: 'Gujarat Education Department',
     },
   },
   gu: {
@@ -145,6 +201,10 @@ const resources = {
       goodEvening: 'શુભ સાંજ',
       greetingHelp: 'હું આજે તમારા ભોજનને ટ્રેક કરવામાં મદદ કરવા માટે અહીં છું.',
       greetingFull: '{{greeting}}! 👋 {{help}} {{question}} {{meal}}?', // <-- Add this line
+      date: 'તારીખ',
+      mealType: 'ભોજનનો પ્રકાર',
+      location: 'સ્થાન',
+      uploadPhoto: 'ફોટો અપલોડ કરો',
 
       // Chat Interface
       todaysMenu: 'આજનું {{meal}} મેન્યુ',
@@ -161,7 +221,7 @@ const resources = {
 
       // Menu Items
       breakfast: 'નાસ્તો',
-      lunch: 'લંચ',
+      lunch: 'મધ્યાહ્ન ભોજન',
       dinner: 'રાત્રિભોજન',
 
       // Analysis
@@ -174,6 +234,7 @@ const resources = {
       carbs: 'કાર્બોહાઇડ્રેટ',
 
       // Profile
+      school: 'શાળા',
       teacherName: 'શિક્ષકનું નામ',
       schoolName: 'શાળાનું નામ',
       district: 'જિલ્લો',
@@ -182,8 +243,24 @@ const resources = {
       helpSupport: 'મદદ અને સપોર્ટ',
       settings: 'સેટિંગ્સ',
 
-        // Navigation & Feedback
-        redirectingToHistory: 'ઇતિહાસ ડેશબોર્ડ પર રીડાયરેક્ટ કરી રહ્યાં છીએ...',
+      // Navigation & Feedback
+      redirectingToHistory: 'ઇતિહાસ ડેશબોર્ડ પર રીડાયરેક્ટ કરી રહ્યાં છીએ...',
+      seeYouAtNextMeal: '{{nextMeal}} પર મળીએ - વધુ સ્વાસ્થ્યપ્રદ પસંદગીઓ ટ્રેક કરવા માટે તૈયાર! 📊',
+      feedbackSubmittedSuccess: 'આભાર! તમારો પ્રતિસાદ સફળતાપૂર્વક સાચવાયો છે. તે તેજસ્વી મનને પોષણ આપતા રહો! 🧠💪',
+
+      // Toast Messages
+      locationAccessNeeded:
+        'સ્થાન એક્સેસ જરૂરી છે જેથી વધુ સેવા આપવામાં મદદ કરી શકે. કૃપા કરીને જ્યારે પ્રમુખીત કરવામાં આવે ત્યારે સ્થાન એક્સેસ અનુમતિ આપો.',
+      locationDetectedSuccess: 'સ્થાન સફળતાપૂર્વક શોધવામાં આવ્યું!',
+      locationPermissionDenied: 'સ્થાન એક્સેસ અનુમતિ અવરોધાયું',
+      locationUnavailable: 'સ્થાન ઉપલબ્ધ નથી',
+      locationTimeout: 'સ્થાન સમયમાં આવી છે',
+      locationError: 'સ્થાન ગુમાવી છે',
+      locationNotSupported: 'સ્થાન આપવામાં નથી',
+      locationServicesUnavailable: 'તમારા બ્રાઉઝરમાં સ્થાન સેવાઓ ઉપલબ્ધ નથી.',
+      imageAnalysisCompleted: 'છબીનું વિશ્લેષણ પૂર્ણ થયું!',
+      imageAnalysisFailed: 'છબીનું વિશ્લેષણ થતું નથી. કૃપા કરીને ફરી પ્રયાસ કરો.',
+      cameraOpenFailed: 'કેમેરા ખોલવામાં થતું નથી. કૃપા કરીને ફરી પ્રયાસ કરો.',
 
       // AI Messages
       great: 'શાનદાર',
@@ -222,37 +299,66 @@ const resources = {
       appName: 'પોષણ ટ્રેકર',
 
       // Additional Translations
-      notSure: 'ખાતરી નથી',
-      veryTasty: 'ખૂબ સ્વાદિષ્ટ',
-      okay: 'બરાબર',
-      notTasty: 'સ્વાદિષ્ટ નથી',
-      tooMuch: 'ઘણું વધારે',
-      totalReports: 'કુલ રિપોર્ટ્સ',
-      sampleUserMenu: 'આજના મેનુમાં પોહા, જલેબી અને એક ગ્લાસ દૂધ છે.',
+      totalReports: 'કુલ અહેવાલો',
       aiPhotoPrompt: 'શું તમે તમારા ભોજનનો ફોટો લઈ શકો છો જેથી હું પોષણનું વિશ્લેષણ કરી શકું? 📸',
       nutritionAssistant: 'પોષણ સહાયક',
       tuverDalKhichdi: 'તુવેર દાળ ખીચડી',
       golVadiFadaLapsi: 'ગોળ વાડી ફડા લાપસી',
       seasonalGreenVegetables: 'ઋતુ પ્રમાણેની લીલી શાકભાજી',
-        gallery: 'ગેલેરી',
-        selectPhotoPrompt: 'આગળ વધવા માટે ફોટો પસંદ કરો...',
-        gram: 'ગ્રામ',
-        feedbackComplete: "તમારા પ્રતિસાદ માટે આભાર!",
-        feedbackSaved: "આભાર! તમારો પ્રતિસાદ સફળતાપૂર્વક સાચવાયો છે.",
-        seeYouAt: "તમને મળીએ",
-        alreadyCompleted: "તમે પહેલેથી જ પૂર્ણ કર્યું છે",
-        feedbackToday: "આજે પ્રતિસાદ",
-        foundFromMenu: "આજના મેનુમાંથી મળ્યું",
-        allDetectedItems: "બધી શોધાયેલ ખાદ્ય વસ્તુઓ",
-        nutritionHighlights: "પોષણ હાઇલાઇટ્સ",
-        totalItems: "કુલ વસ્તુઓ",
+      gallery: 'ગેલેરી',
+      selectPhotoPrompt: 'આગળ વધવા માટે ફોટો પસંદ કરો...',
+      gram: 'ગ્રામ',
+      feedbackComplete: 'તમારા પ્રતિસાદ માટે આભાર!',
+      feedbackSaved: 'આભાર! તમારો પ્રતિસાદ સફળતાપૂર્વક સાચવાયો છે.',
+      seeYouAt: 'તમને મળીએ',
+      alreadyCompleted: 'તમે પહેલેથી જ પૂર્ણ કર્યું છે',
+      feedbackToday: 'આજે પ્રતિસાદ',
+      foundFromMenu: 'આજના મેનુમાંથી મળ્યું',
+      allDetectedItems: 'બધી શોધાયેલ ખાદ્ય વસ્તુઓ',
+      nutritionHighlights: 'પોષણ હાઇલાઇટ્સ',
+      totalItems: 'કુલ વસ્તુઓ',
+
+      // History Dashboard
+      trackProgress: 'તમારા ભોજન રિપોર્ટિંગ પ્રગતિને ટ્રેક કરો',
+      filters: 'ફિલ્ટર્સ',
+      selectDate: 'તારીખની રેન્જ પસંદ કરો',
+      allTime: 'બધો સમય',
+      today: 'આજે',
+      thisWeek: 'આ સપ્તાહ',
+      thisMonth: 'આ મહિનો',
+      selectMeal: 'ભોજનનો પ્રકાર પસંદ કરો',
+      allMeals: 'બધા ભોજન',
+      sessionHistory: 'સેશન ઇતિહાસ',
+      sessions: 'સેશન્સ',
+      noSessionsFound: 'કોઈ સેશન મળ્યું નથી',
+      completed: 'પૂર્ણ',
+      pending: 'પેન્ડિંગ',
+      freshness: 'તાજગી',
+      quantity: 'જથ્થો',
+      satisfaction: 'સંતુષ્ટિ',
+      completionRate: 'પૂર્ણતા દર',
+      studentsServed: 'વિદ્યાર્થીઓ પૂર્ણ કર્યા',
+
+      // Profile Screen
+      manageAccountInfo: 'તમારા ખાતાની માહિતી સંચાલિત કરો',
+      preferredLanguage: 'પસંદગીની ભાષા',
+      activitySummary: 'પ્રવૃત્તિ સારાંશ',
+      accuracyRate: 'ચોકસાઈ દર',
+      chooseLanguage: 'ભાષા પસંદ કરો',
+      signOut: 'બાહર જાઓ',
+      governmentOfGujarat: 'ગુજરાત સરકાર',
+      ministryOfEducation: 'શિક્ષણ મંત્રાલય',
+      sarvaShikshaAbhiyan: 'સર્વશીક્ષા અભિયાન',
+
+      // Splash Screen
+      gujaratEducationDepartment: 'ગુજરાત શિક્ષણ વિભાગ',
     },
   },
 };
 
 i18n.use(initReactI18next).init({
   resources,
-  lng: 'en',
+  lng: 'gu', // Default language
   fallbackLng: 'en',
   interpolation: {
     escapeValue: false,

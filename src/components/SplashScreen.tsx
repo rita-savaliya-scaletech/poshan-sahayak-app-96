@@ -1,3 +1,5 @@
+import { API_CONFIG } from '@/shared/api';
+import HttpService from '@/shared/services/Http.service';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -6,7 +8,15 @@ interface SplashScreenProps {
 }
 
 const SplashScreen = ({ onComplete }: SplashScreenProps) => {
-  const { t } = useTranslation();
+  const { i18n } = useTranslation();
+
+  const handleCreateUsert = async () => {
+    await HttpService.post(`${API_CONFIG.addUser}?lang=${i18n.language}`);
+  };
+
+  useEffect(() => {
+    handleCreateUsert();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -26,7 +36,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
 
         {/* App Title */}
         <div className="space-y-3">
-          <h1 className="text-4xl font-bold text-primary">AI {t('appName')}</h1>
+          <h1 className="text-4xl font-bold text-primary">AI Poshan Tracker</h1>
           <p className="text-lg text-muted-foreground font-medium">Empowering Nutrition. Powered by AI.</p>
         </div>
 

@@ -80,11 +80,11 @@ export const getSessionForMealToday = (mealType: 'breakfast' | 'lunch' | 'dinner
   try {
     const today = new Date().toISOString().split('T')[0];
     const allSessions = getAllChatSessions(); // Use internal function to get all sessions
-    return allSessions.find(session => 
-      session.date === today && 
-      session.mealType === mealType && 
-      session.status === 'completed'
-    ) || null;
+    return (
+      allSessions.find(
+        (session) => session.date === today && session.mealType === mealType && session.status === 'completed'
+      ) || null
+    );
   } catch (error) {
     console.error('Failed to get session for meal today:', error);
     return null;
@@ -101,8 +101,21 @@ export const getMealTypeFromTime = (): 'breakfast' | 'lunch' | null => {
   const minutes = now.getMinutes();
   const totalMinutes = hour * 60 + minutes;
 
-  if (totalMinutes >= 510 && totalMinutes < 570) return 'breakfast'; // 8:30 – 9:30
-  if (totalMinutes >= 750 && totalMinutes < 810) return 'lunch'; // 12:30 – 1:30
+  // if (totalMinutes >= 510 && totalMinutes < 570) return 'breakfast'; // 8:30 – 9:30
+  // if (totalMinutes >= 750 && totalMinutes < 810) return 'lunch'; // 12:30 – 1:30
 
-  return null; // Outside of meal time
+  // return null; // Outside of meal time
+
+  // Breakfast: 8:30 AM – 12:30 PM (510 – 750)
+  if (totalMinutes >= 510 && totalMinutes < 750) {
+    return 'breakfast';
+  }
+
+  // Lunch: 12:30 PM – next day 8:30 AM (750 – 1440 and 0 – 510)
+  if (totalMinutes >= 750 || totalMinutes < 510) {
+    return 'lunch';
+  }
+
+  // Just in case (should never reach here)
+  return null;
 };
