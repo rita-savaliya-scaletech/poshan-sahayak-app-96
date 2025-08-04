@@ -58,7 +58,7 @@ export interface FeedbackQuestion {
 interface ChatInterfaceProps {
   onNavigateToHistory?: () => void;
 }
-
+/* 
 // --- Hooks ---
 const useMealQuestionnaireQuestions = () => {
   const { t } = useTranslation();
@@ -124,7 +124,7 @@ const useMealQuestionnaireQuestions = () => {
       ],
     },
   ];
-};
+}; */
 
 const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const webcamRef = useRef<Webcam>(null);
@@ -140,6 +140,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [cameraPermission, setCameraPermission] = useState(true);
+  const [feedbackQuestions, setFeedbackQuestions] = useState([]);
 
   // Feedback flow state
   const [feedbackStep, setFeedbackStep] = useState(0);
@@ -475,7 +476,13 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     }
   };
 
-  const feedbackQuestions = useMealQuestionnaireQuestions();
+  const getSurveyQuestion = async () => {
+    const response = await HttpService.get(`${API_CONFIG.feedbackQuestionnaire}/${i18n.language}`);
+    console.log('🚀 ~ getSurveyQuestion ~ response-------->', response);
+    setFeedbackQuestions(response.questions);
+  };
+
+  // const feedbackQuestions = useMealQuestionnaireQuestions();
 
   const startFeedbackFlow = () => {
     setTimeout(() => {
@@ -497,6 +504,10 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       }, 1500);
     }, 500);
   };
+
+  useEffect(() => {
+    getSurveyQuestion();
+  }, [i18n.language]);
 
   useEffect(() => {
     // Remove the upper bound check so askNextQuestion runs when feedbackStep > feedbackQuestions.length
