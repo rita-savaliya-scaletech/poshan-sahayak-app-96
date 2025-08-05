@@ -50,15 +50,13 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
 
       if ('geolocation' in navigator) {
         try {
-          if (context.isPWA) {
-            // For PWA, show a toast to inform user about location permission
-            toast.info(t('locationAccessNeeded'));
-          }
+          // Always prompt for location permission in English
+          toast.info('Location access is needed for better service. Please allow location access when prompted.');
 
           const hasPermission = await requestLocationPermission();
 
           if (!hasPermission) {
-            toast.error(showPermissionInstructions('location'));
+            toast.error('Location permission is required for better service. Please allow location access in your device settings or browser permissions.');
             setLocationName(t('locationPermissionDenied'));
             return;
           }
@@ -264,6 +262,9 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     }
 
     try {
+      // Show camera permission prompt in English
+      toast.info('Camera access is needed to take photos. Please allow camera access when prompted.');
+      
       const context = getPWAContext();
       const hasPermission = await requestPermissions();
       setCameraPermission(hasPermission);
@@ -290,9 +291,9 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
           // For native or regular web, show camera modal
           setShowCamera(true);
         }
-      } else {
-        toast.error(showPermissionInstructions('camera'));
-      }
+        } else {
+          toast.error('Camera permission is required. Please allow camera access in your device settings or browser permissions.');
+        }
     } catch (error) {
       console.error('Camera open error:', error);
       toast.error(t('cameraOpenFailed'));
