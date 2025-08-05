@@ -172,7 +172,7 @@ const resources = {
       location: 'સ્થાન',
       capturePhoto: 'ફોટો કેપ્ચર કરો',
       uploading: 'અપલોડ કરી રહ્યું છે...',
-      recapturePhoto: 'ફોટો પુનઃલોડ કરો',
+      recapturePhoto: 'ફોટો પુનઃ કેપ્ચર કરો',
       photoUploaded: 'ફોટો અપલોડ થઈ ગયો',
       noItemsFoundRecapture:
         'આજના મેનૂમાંથી કોઈ આઇટમ મળી નથી. વધુ સારા વિશ્લેષણ માટે કૃપા કરીને ફોટો ફરીથી કેપ્ચર કરો.',
