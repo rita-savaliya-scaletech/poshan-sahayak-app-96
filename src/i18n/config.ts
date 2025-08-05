@@ -6,8 +6,6 @@ const resources = {
     translation: {
       next: 'Next',
       back: 'Back',
-      yes: 'Yes',
-      no: 'No',
 
       selectLanguage: 'Select Language',
       english: 'English',
@@ -161,8 +159,6 @@ const resources = {
     translation: {
       next: 'આગળ',
       back: 'પાછળ',
-      yes: 'હા',
-      no: 'ના',
       selectLanguage: 'ભાષા પસંદ કરો',
       english: 'English',
       gujarati: 'ગુજરાતી',
@@ -174,7 +170,7 @@ const resources = {
       date: 'તારીખ',
       mealType: 'ભોજનનો પ્રકાર',
       location: 'સ્થાન',
-      capturePhoto: 'ફોટો અપલોડ કરો',
+      capturePhoto: 'ફોટો કેપ્ચર કરો',
       uploading: 'અપલોડ કરી રહ્યું છે...',
       recapturePhoto: 'ફોટો પુનઃલોડ કરો',
       photoUploaded: 'ફોટો અપલોડ થઈ ગયો',

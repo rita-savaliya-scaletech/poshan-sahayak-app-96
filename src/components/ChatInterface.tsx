@@ -52,7 +52,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
           );
           const data = await res.json();
           setLocationName(data.display_name || '');
-          toast.success(t('locationDetectedSuccess'));
         } catch (geocodeError) {
           console.error('Geocoding error:', geocodeError);
           setLocationName(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
@@ -67,19 +66,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
 
   useEffect(() => {
     askForLocation();
-  }, []);
-
-  useEffect(() => {
-    const handleFirstUserInteraction = () => {
-      askForLocation();
-      window.removeEventListener('click', handleFirstUserInteraction);
-    };
-
-    window.addEventListener('click', handleFirstUserInteraction);
-
-    return () => {
-      window.removeEventListener('click', handleFirstUserInteraction);
-    };
   }, []);
 
   // Memoize menu for performance
@@ -521,11 +507,8 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
         });
       }
 
-      toast.success(t('feedbackSubmitted'));
-
       setTimeout(() => {
         onNavigateToHistory?.();
-        toast.success(t('redirectingToHistory'));
       }, 2000);
     }, 500);
   };
@@ -557,24 +540,26 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
               videoConstraints={{ facingMode: 'environment' }}
               className="rounded-lg"
             />
-            <Button className="mt-4" onClick={handleTakePhoto} disabled={isUploading || imageUploaded}>
-              {isUploading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  {t('uploading')}
-                </>
-              ) : imageUploaded ? (
-                <>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  {t('photoUploaded')}
-                </>
-              ) : (
-                t('capturePhoto')
-              )}
-            </Button>
-            <Button className="mt-2" variant="outline" onClick={() => setShowCamera(false)}>
-              {t('back')}
-            </Button>
+            <div>
+              <Button className="mt-4" onClick={handleTakePhoto} disabled={isUploading || imageUploaded}>
+                {isUploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    {t('uploading')}
+                  </>
+                ) : imageUploaded ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    {t('photoUploaded')}
+                  </>
+                ) : (
+                  t('capturePhoto')
+                )}
+              </Button>
+              <Button className="ml-2" variant="outline" onClick={() => setShowCamera(false)}>
+                {t('back')}
+              </Button>
+            </div>
           </div>
         </div>
       )}
