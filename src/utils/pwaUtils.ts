@@ -90,13 +90,13 @@ export const showPermissionInstructions = (permissionType: 'camera' | 'location'
     if (context.isPWA) {
       return 'Camera permission is required. Please allow camera access in your device settings or browser permissions.';
     } else {
-      return 'Camera permission is required. Please allow camera access when prompted.';
+      return 'Camera permission is required. Please allow camera access.';
     }
   } else {
     if (context.isPWA) {
       return 'Location permission is required for better service. Please allow location access in your device settings.';
     } else {
-      return 'Location permission is required for better service. Please allow location access when prompted.';
+      return 'Location permission is required for better service. Please allow location access.';
     }
   }
 };
