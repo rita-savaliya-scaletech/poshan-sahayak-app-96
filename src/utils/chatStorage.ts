@@ -95,7 +95,7 @@ export const generateSessionId = (): string => {
   return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-export const getMealTypeFromTime = (): 'breakfast' | 'lunch' | null => {
+export const getMealTypeFromTime = (): 'breakfast' | 'lunch' | 'dinner' | null => {
   const now = new Date();
   const hour = now.getHours();
   const minutes = now.getMinutes();
@@ -111,11 +111,16 @@ export const getMealTypeFromTime = (): 'breakfast' | 'lunch' | null => {
     return 'breakfast';
   }
 
-  // Lunch: 12:30 PM – next day 8:30 AM (750 – 1440 and 0 – 510)
-  if (totalMinutes >= 750 || totalMinutes < 510) {
+  // Lunch: 12:30 PM – 4:00 PM (750 – 960)
+  if (totalMinutes >= 750 && totalMinutes < 960) {
     return 'lunch';
   }
 
-  // Just in case (should never reach here)
+  // Dinner: 4:00 PM – 8:30 AM next day (960 – 1440 and 0 – 510)
+  if (totalMinutes >= 960 || totalMinutes < 510) {
+    return 'dinner';
+  }
+
+  // Fallback
   return null;
 };

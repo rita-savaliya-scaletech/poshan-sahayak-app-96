@@ -1,7 +1,8 @@
-import { API_CONFIG } from '@/shared/api';
-import HttpService from '@/shared/services/Http.service';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { API_CONFIG } from '@/shared/api';
+import AuthService from '@/shared/services/Auth.service';
+import HttpService from '@/shared/services/Http.service';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -11,7 +12,8 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
   const { i18n } = useTranslation();
 
   const handleCreateUsert = async () => {
-    await HttpService.post(`${API_CONFIG.addUser}?lang=${i18n.language}`);
+    const response = await HttpService.post(`${API_CONFIG.addUser}?lang=${i18n.language}`);
+    AuthService.setAuthData(response);
   };
 
   useEffect(() => {

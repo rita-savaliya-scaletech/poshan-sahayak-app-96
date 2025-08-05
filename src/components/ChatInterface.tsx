@@ -1,130 +1,23 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
+import Webcam from 'react-webcam';
 import { Camera, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useCamera } from '@/hooks/useCamera';
-import Webcam from 'react-webcam';
 import {
-  saveChatSession,
   generateSessionId,
   getMealTypeFromTime,
   getSessionForMealToday,
-  type ChatSession,
-  type ChatMessage,
+  saveChatSession,
   updateChatSession,
+  type ChatMessage,
+  type ChatSession,
 } from '@/utils/chatStorage';
-import HttpService from '@/shared/services/Http.service';
-import { API_CONFIG } from '@/shared/api';
-import { Capacitor } from '@capacitor/core';
 import { getPWAContext, requestLocationPermission, showPermissionInstructions } from '@/utils/pwaUtils';
-
-// --- Types ---
-export interface MenuItem {
-  name: string;
-  quantity: string;
-  emoji: string;
-}
-
-export interface NutritionInfo {
-  calories?: string;
-  protein?: string;
-  fat?: string;
-  carbs?: string;
-}
-
-export interface AnalysisResult {
-  itemsFood: string[];
-  inputMenu: string[];
-  foundItems: string[];
-  missingItems: string[];
-  nutritions: Record<string, NutritionInfo>;
-}
-
-export interface FeedbackOption {
-  value: string;
-  label: string;
-  icon?: string;
-}
-
-export interface FeedbackQuestion {
-  key: string;
-  text: string;
-  icon?: string;
-  type: 'single' | 'multi';
-  options: FeedbackOption[];
-}
-
-interface ChatInterfaceProps {
-  onNavigateToHistory?: () => void;
-}
-/* 
-// --- Hooks ---
-const useMealQuestionnaireQuestions = () => {
-  const { t } = useTranslation();
-  return [
-    {
-      key: '1',
-      text: t('question1'),
-      icon: '🥗',
-      type: 'single',
-      options: [
-        { value: t('q1opt1'), label: t('q1opt1'), icon: '👍' },
-        { value: t('q1opt2'), label: t('q1opt2'), icon: '😐' },
-        { value: t('q1opt3'), label: t('q1opt3'), icon: '🙁' },
-        { value: t('q1opt4'), label: t('q1opt4'), icon: '🤔' },
-      ],
-    },
-    {
-      key: '2',
-      text: t('question2'),
-      icon: '😋',
-      type: 'single',
-      options: [
-        { value: t('q2opt1'), label: t('q2opt1'), icon: '😍' },
-        { value: t('q2opt2'), label: t('q2opt2'), icon: '😋' },
-        { value: t('q2opt3'), label: t('q2opt3'), icon: '👍' },
-        { value: t('q2opt4'), label: t('q2opt4'), icon: '👎' },
-      ],
-    },
-    {
-      key: '3',
-      text: t('question3'),
-      icon: '🍽️',
-      type: 'single',
-      options: [
-        { value: t('q3opt1'), label: t('q3opt1'), icon: '😅' },
-        { value: t('q3opt2'), label: t('q3opt2'), icon: '👍' },
-        { value: t('q3opt3'), label: t('q3opt3'), icon: '🙁' },
-        { value: t('q3opt4'), label: t('q3opt4'), icon: '👎' },
-      ],
-    },
-    {
-      key: '4',
-      text: t('question4'),
-      icon: '😋',
-      type: 'single',
-      options: [
-        { value: t('q4opt1'), label: t('q4opt1'), icon: '😍' },
-        { value: t('q4opt2'), label: t('q4opt2'), icon: '👌' },
-        { value: t('q4opt3'), label: t('q4opt3'), icon: '🙂' },
-        { value: t('q4opt4'), label: t('q4opt4'), icon: '👎' },
-      ],
-    },
-    {
-      key: '5',
-      text: t('question5'),
-      icon: '🍽️',
-      type: 'single',
-      options: [
-        { value: t('q5opt1'), label: t('q5opt1'), icon: '😍' },
-        { value: t('q5opt2'), label: t('q5opt2'), icon: '👌' },
-        { value: t('q5opt3'), label: t('q5opt3'), icon: '👍' },
-        { value: t('q5opt4'), label: t('q5opt4'), icon: '👎' },
-      ],
-    },
-  ];
-}; */
+import { Button } from '@/components/ui/button';
+import { useCamera } from '@/hooks/useCamera';
+import { API_CONFIG } from '@/shared/api';
+import HttpService from '@/shared/services/Http.service';
+import { ChatInterfaceProps, MenuItem } from './interface';
 
 const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const webcamRef = useRef<Webcam>(null);
@@ -141,11 +34,14 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const [showCamera, setShowCamera] = useState(false);
   const [cameraPermission, setCameraPermission] = useState(true);
   const [feedbackQuestions, setFeedbackQuestions] = useState([]);
-
   // Feedback flow state
   const [feedbackStep, setFeedbackStep] = useState(0);
   const [feedbackData, setFeedbackData] = useState({});
   const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(false);
+  const [imageUploaded, setImageUploaded] = useState(false);
+  const [activeUploadButton, setActiveUploadButton] = useState<'main' | 'recapture' | null>(null);
 
   // Detect location on mount
   useEffect(() => {
@@ -234,6 +130,18 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
+  const getNextMealTime = () => {
+    const now = new Date();
+    const hour = now.getHours();
+    const minutes = now.getMinutes();
+    const totalMinutes = hour * 60 + minutes;
+
+    // Breakfast: 8:30 – 9:30, Lunch: 12:30 – 1:30
+    if (totalMinutes < 510) return `${t('breakfast')} (8:30 – 9:30 AM)`;
+    if (totalMinutes < 750) return `${t('lunch')} (12:30 – 1:30 PM)`;
+    return `${t('breakfast')} (8:30 – 9:30 AM)`; // Next day
+  };
+
   // Simulate conversation on load
   useEffect(() => {
     // Get next meal time for message
@@ -288,8 +196,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
         text: t('greetingFull', {
           greeting: getDynamicGreeting(),
           help: t('greetingHelp'),
-          question: t('whatDidYouHave'),
-          meal: t(mealType),
         }),
       },
       timestamp: new Date(),
@@ -351,95 +257,12 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     </div>
   );
 
-  const handleImageUpload = async (imageData: string) => {
-    setIsTyping(true);
-    // Add user message with image
-    const userMessage: ChatMessage = {
-      id: `msg_${Date.now()}`,
-      type: 'user',
-      content: { image: imageData, fileName: 'food-image.jpg' },
-      timestamp: new Date(),
-    };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-
-    // Update session
-    if (currentSession) {
-      const updatedSession = { ...currentSession, messages: updatedMessages };
-      setCurrentSession(updatedSession);
-      saveChatSession(updatedSession);
-    }
-
-    // Show typing indicator while analyzing
-    setTimeout(() => {
-      setIsTyping(true);
-    }, 500);
-
-    try {
-      const response = await fetch(imageData);
-      const blob = await response.blob();
-      const file = new File([blob], 'food-image.jpg', { type: 'image/jpeg' });
-      const menuNames = todaysMenu.map((item) => item.name);
-
-      // Create FormData for the API call
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('menu', JSON.stringify(menuNames));
-      formData.append('lang', i18n.language || 'gu');
-
-      // Make the API call with form-data
-      const result = await HttpService.post(API_CONFIG.uploadFoodPhoto, formData, {
-        contentType: 'multiparts/form-data',
-      });
-
-      setIsTyping(false);
-
-      // Add analysis result
-      const analysisMessage: ChatMessage = {
-        id: `msg_${Date.now()}`,
-        type: 'analysis',
-        content: result,
-        timestamp: new Date(),
-      };
-      const finalMessages = [...updatedMessages, analysisMessage];
-      setMessages(finalMessages);
-
-      // Update session with analysis
-      if (currentSession) {
-        const updatedSession = {
-          ...currentSession,
-          messages: finalMessages,
-          analysisResult: result,
-        };
-        setCurrentSession(updatedSession);
-        saveChatSession(updatedSession);
-      }
-
-      toast.success(t('imageAnalysisCompleted'));
-
-      setTimeout(() => {
-        setIsTyping(false);
-
-        startFeedbackFlow();
-      }, 1000);
-    } catch (error) {
-      setIsTyping(false);
-      toast.error(t('imageAnalysisFailed'));
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  // Camera capture handler
-  const handleTakePhoto = () => {
-    const imageSrc = webcamRef.current?.getScreenshot();
-    if (imageSrc) {
-      handleImageUpload(imageSrc);
-      setShowCamera(false);
-    }
-  };
-
   const handleOpenCamera = async () => {
+    setActiveUploadButton('main');
+    if (isUploading || imageUploaded) {
+      return; // Prevent opening camera if already uploading or image already uploaded
+    }
+
     try {
       const context = getPWAContext();
       const hasPermission = await requestPermissions();
@@ -476,13 +299,18 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     }
   };
 
-  const getSurveyQuestion = async () => {
-    const response = await HttpService.get(`${API_CONFIG.feedbackQuestionnaire}/${i18n.language}`);
-    console.log('🚀 ~ getSurveyQuestion ~ response-------->', response);
-    setFeedbackQuestions(response.questions);
+  const handleRecapture = async () => {
+    setActiveUploadButton('recapture');
+    setImageUploaded(false);
+    setUploadError(false);
+    setIsUploading(false);
+    await handleOpenCamera();
   };
 
-  // const feedbackQuestions = useMealQuestionnaireQuestions();
+  const getSurveyQuestion = async () => {
+    const response = await HttpService.get(`${API_CONFIG.feedbackQuestionnaire}/${i18n.language}`);
+    setFeedbackQuestions(response.questions);
+  };
 
   const startFeedbackFlow = () => {
     setTimeout(() => {
@@ -505,9 +333,144 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     }, 500);
   };
 
-  useEffect(() => {
-    getSurveyQuestion();
-  }, [i18n.language]);
+  // Camera capture handler
+  const handleTakePhoto = () => {
+    const imageSrc = webcamRef.current?.getScreenshot();
+    if (imageSrc) {
+      handleImageUpload(imageSrc);
+      setShowCamera(false);
+    }
+  };
+
+  const handleImageUpload = async (imageData: string) => {
+    setIsUploading(true);
+    setUploadError(false);
+    setIsTyping(true);
+
+    // Add user message with image
+    const userMessage: ChatMessage = {
+      id: `msg_${Date.now()}`,
+      type: 'user',
+      content: { image: imageData, fileName: 'food-image.jpg' },
+      timestamp: new Date(),
+    };
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+
+    // Update session
+    if (currentSession) {
+      const updatedSession = { ...currentSession, messages: updatedMessages };
+      setCurrentSession(updatedSession);
+      saveChatSession(updatedSession);
+    }
+
+    // Show typing indicator while analyzing
+    setTimeout(() => {
+      setIsTyping(true);
+    }, 500);
+
+    try {
+      const response = await fetch(imageData);
+      const blob = await response.blob();
+      const file = new File([blob], 'food-image.jpg', { type: 'image/jpeg' });
+      const menuNames = todaysMenu.map((item) => item.name);
+
+      // Create FormData for the API call
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('menu', JSON.stringify(menuNames));
+      formData.append('lang', i18n.language || 'gu');
+
+      // Make the API call with form-data
+      const result = await HttpService.post(API_CONFIG.uploadFoodPhoto, formData);
+
+      // Check if the result has valid data
+      const hasValidData =
+        result &&
+        ((result.found_items && result.found_items.length > 0) ||
+          (result.items_food && result.items_food.length > 0) ||
+          (result.nutritions && Object.keys(result.nutritions).length > 0));
+
+      if (!hasValidData) {
+        throw new Error('No valid data received from analysis');
+      }
+
+      setIsTyping(false);
+      setIsUploading(false);
+      setImageUploaded(true);
+
+      // Add analysis result
+      const analysisMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        type: 'analysis',
+        content: result,
+        timestamp: new Date(),
+      };
+      const finalMessages = [...updatedMessages, analysisMessage];
+      setMessages(finalMessages);
+
+      // Update session with analysis
+      if (currentSession) {
+        const updatedSession = {
+          ...currentSession,
+          messages: finalMessages,
+          analysisResult: result,
+        };
+        setCurrentSession(updatedSession);
+        saveChatSession(updatedSession);
+      }
+
+      toast.success(t('imageAnalysisCompleted'));
+
+      // Show message if no nutrition details found
+      const hasNutritionDetails = result.nutritions && Object.keys(result.nutritions).length > 0;
+      if (!hasNutritionDetails) {
+        setTimeout(() => {
+          setIsTyping(true);
+          setTimeout(() => {
+            setIsTyping(false);
+            const nutritionMissingMessage: ChatMessage = {
+              id: `msg_${Date.now()}_nutrition_missing`,
+              type: 'system',
+              content: {
+                text: t('noNutritionDetailsFound'),
+                showRecaptureButton: true,
+              },
+              timestamp: new Date(),
+            };
+            setMessages((prev) => [...prev, nutritionMissingMessage]);
+            setImageUploaded(false); // Reset to allow recapture
+          }, 1200);
+        }, 800);
+      } else {
+        // Normal flow - start feedback
+        await getSurveyQuestion();
+        setTimeout(() => {
+          setIsTyping(false);
+          startFeedbackFlow();
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Image analysis error:', error);
+      setIsTyping(false);
+      setIsUploading(false);
+      setUploadError(true);
+
+      // Add error message with recapture option
+      const errorMessage: ChatMessage = {
+        id: `msg_${Date.now()}_error`,
+        type: 'system',
+        content: {
+          text: t('imageAnalysisFailed'),
+          showRecaptureButton: true,
+        },
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+
+      toast.error(t('imageAnalysisFailed'));
+    }
+  };
 
   useEffect(() => {
     // Remove the upper bound check so askNextQuestion runs when feedbackStep > feedbackQuestions.length
@@ -529,10 +492,8 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
           id: `msg_${Date.now()}_question_${feedbackStep - 1}`,
           type: 'feedback_question',
           content: {
+            questionKey: question.id,
             text: question.text,
-            questionKey: question.key,
-            questionType: question.type,
-            icon: question.icon,
             options: question.options || [],
           },
           timestamp: new Date(),
@@ -542,18 +503,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     } else {
       completeFeedback();
     }
-  };
-
-  const getNextMealTime = () => {
-    const now = new Date();
-    const hour = now.getHours();
-    const minutes = now.getMinutes();
-    const totalMinutes = hour * 60 + minutes;
-
-    // Breakfast: 8:30 – 9:30, Lunch: 12:30 – 1:30
-    if (totalMinutes < 510) return `${t('breakfast')} (8:30 – 9:30 AM)`;
-    if (totalMinutes < 750) return `${t('lunch')} (12:30 – 1:30 PM)`;
-    return `${t('breakfast')} (8:30 – 9:30 AM)`; // Next day
   };
 
   const handleFeedbackAnswer = (questionKey: string, answer: string) => {
@@ -632,11 +581,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       {showCamera && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
           <div className="bg-white p-4 rounded-lg flex flex-col items-center">
-            {!cameraPermission && (
-              <p className="text-xs text-red-600 mb-2">
-                {t('cameraPermissionDenied', 'Camera permission denied. Please allow camera access to continue.')}
-              </p>
-            )}
+            {!cameraPermission && <p className="text-xs text-red-600 mb-2">{t('cameraPermissionDenied')}</p>}
             <Webcam
               audio={false}
               ref={webcamRef}
@@ -644,11 +589,23 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
               videoConstraints={{ facingMode: 'environment' }}
               className="rounded-lg"
             />
-            <Button className="mt-4" onClick={handleTakePhoto}>
-              {t('uploadPhoto', 'Click Photo')}
+            <Button className="mt-4" onClick={handleTakePhoto} disabled={isUploading || imageUploaded}>
+              {isUploading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {t('uploading')}
+                </>
+              ) : imageUploaded ? (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {t('photoUploaded')}
+                </>
+              ) : (
+                t('uploadPhoto')
+              )}
             </Button>
             <Button className="mt-2" variant="outline" onClick={() => setShowCamera(false)}>
-              {t('back', 'Back')}
+              {t('back')}
             </Button>
           </div>
         </div>
@@ -668,7 +625,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                         alt="Food upload"
                         className="w-48 h-36 object-cover rounded-lg mb-2"
                       />
-                      <p className="text-xs opacity-75">📸 Photo</p>
+                      <p className="text-xs opacity-75">📸</p>
                       <div className="flex items-center justify-end mt-1 space-x-1">
                         <span className="text-xs opacity-75">
                           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -746,9 +703,45 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                       <Button
                         className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg mt-3"
                         onClick={handleOpenCamera}
+                        disabled={isUploading && activeUploadButton === 'main'}
                       >
-                        <Camera className="w-5 h-5" />
-                        <span>{t('uploadPhoto')}</span>
+                        {activeUploadButton === 'main' && isUploading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>{t('uploading')}</span>
+                          </>
+                        ) : imageUploaded ? (
+                          <>
+                            <CheckCircle className="w-5 h-5" />
+                            <span>{t('photoUploaded')}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="w-5 h-5" />
+                            <span>{t('uploadPhoto')}</span>
+                          </>
+                        )}
+                      </Button>
+                    )}
+
+                    {/* Show recapture button for error messages */}
+                    {message?.content?.showRecaptureButton && (
+                      <Button
+                        className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg mt-3"
+                        onClick={handleRecapture}
+                        disabled={isUploading && activeUploadButton === 'main'}
+                      >
+                        {activeUploadButton === 'recapture' && isUploading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>{t('uploading')}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="w-5 h-5" />
+                            <span>{t('recapturePhoto')}</span>
+                          </>
+                        )}
                       </Button>
                     )}
 
@@ -783,7 +776,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                 <div className="flex justify-start mb-3">
                   <div className="message-bubble-ai max-w-[85%]">
                     <div className="space-y-3">
-                      {message?.content?.found_items.length > 0 && (
+                      {message?.content?.found_items.length > 0 ? (
                         <>
                           <p className="font-semibold text-success">✅ {t('analysisComplete')}!</p>
                           <div className="bg-success/10 p-3 rounded-lg">
@@ -797,21 +790,39 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                             </div>
                           </div>
                         </>
+                      ) : (
+                        <div className="bg-success/10 p-3 rounded-lg">
+                          <p className="text-sm font-medium text-success mb-2">{t('itemsFound')}:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {message?.content?.items_food?.map((item: string, idx: number) => (
+                              <span key={idx} className="bg-success text-white text-xs px-2 py-1 rounded-full">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       )}
 
-                      {message?.content?.nutritions.length > 0 && (
+                      {message?.content?.nutritions && Object.keys(message?.content?.nutritions).length > 0 && (
                         <div className="bg-primary/10 p-3 rounded-lg space-y-2 text-xs">
-                          {Object.entries(message?.content?.nutritions).map(([food, nutrition], idx) => (
-                            <div key={idx} className="bg-background/80 p-2 rounded">
-                              <p className="font-medium capitalize">{food}</p>
-                              {nutrition &&
-                                typeof nutrition === 'object' &&
-                                'calories' in nutrition &&
-                                nutrition.calories && (
-                                  <p className="text-muted-foreground">📊 {String(nutrition.calories)}</p>
+                          <p className="text-sm font-medium text-primary mb-2">📊 {t('nutritionInfo')}:</p>
+                          {Object.entries(message?.content?.nutritions).map(([food, nutrition], idx) => {
+                            return (
+                              <div key={idx} className="bg-background/80 p-3 rounded-lg">
+                                <div className="font-medium text-sm mb-2 capitalize">{food}</div>
+                                {nutrition && typeof nutrition === 'object' && (
+                                  <div className="space-y-1">
+                                    {Object.entries(nutrition).map(([nutrient, value], nutrientIdx) => (
+                                      <div key={nutrientIdx} className="flex justify-between items-center text-xs">
+                                        <span className="text-muted-foreground capitalize">{nutrient}:</span>
+                                        <span className="font-medium">{String(value)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
                                 )}
-                            </div>
-                          ))}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
 
@@ -824,16 +835,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                                 {item}
                               </span>
                             ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {message?.content?.found_items.length === 0 && (
-                        <div className="bg-destructive/10 p-3 rounded-lg">
-                          <div className="flex flex-wrap gap-1">
-                            <span className="bg-destructive text-white text-sm px-2 py-1 rounded-full">
-                              {message?.content?.items_food[0]}
-                            </span>
                           </div>
                         </div>
                       )}
@@ -856,15 +857,14 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                     </p>
                     <div className="flex flex-col gap-2 mt-3">
                       {message?.content?.options?.map((option) => {
-                        const messageIndex = messages.findIndex((msg) => msg.id === message.id);
                         const questionIndex = feedbackQuestions.findIndex(
-                          (q) => q.key === message?.content?.questionKey
+                          (q) => q.id === message?.content?.questionKey
                         );
                         const isAnswered = answeredQuestions.has(questionIndex);
 
                         return (
                           <Button
-                            key={option.value}
+                            key={option}
                             size="sm"
                             variant="outline"
                             disabled={isAnswered}
@@ -873,10 +873,10 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                                 ? 'opacity-50 cursor-not-allowed bg-muted'
                                 : 'bg-background/80 hover:bg-primary hover:text-primary-foreground'
                             }`}
-                            onClick={() => handleFeedbackAnswer(message?.content?.questionKey, option.label)}
+                            onClick={() => handleFeedbackAnswer(message?.content?.questionKey, option)}
                           >
                             {option.icon && <span>{option.icon}</span>}
-                            <span>{option.label}</span>
+                            <span>{option}</span>
                           </Button>
                         );
                       })}
