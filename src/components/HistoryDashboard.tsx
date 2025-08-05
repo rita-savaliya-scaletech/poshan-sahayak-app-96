@@ -121,7 +121,7 @@ const HistoryDashboard = () => {
           </div>
         </Card> */}
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-6">
           <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-primary/10 rounded-lg">
