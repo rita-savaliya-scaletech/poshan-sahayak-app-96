@@ -303,7 +303,7 @@ const resources = {
       gujaratEducationDepartment: 'ગુજરાત શિક્ષણ વિભાગ',
       menuDetails: 'મેન્યુ વિગતો',
       extraItems: 'વધારાની વસ્તુઓ',
-      noNutritionDetailsFound: 'Nઅપલોડ કરેલા ફોટા માટે પોષણની કોઈ વિગતો મળી નથી.',
+      noNutritionDetailsFound: 'અપલોડ કરેલા ફોટા માટે પોષણની કોઈ વિગતો મળી નથી.',
     },
   },
 };
