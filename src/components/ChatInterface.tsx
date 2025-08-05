@@ -43,75 +43,44 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const [imageUploaded, setImageUploaded] = useState(false);
   const [activeUploadButton, setActiveUploadButton] = useState<'main' | 'recapture' | null>(null);
 
-  // Detect location on mount
-  useEffect(() => {
-    const detectLocation = async () => {
-      const context = getPWAContext();
-
-      if ('geolocation' in navigator) {
+  const askForLocation = async () => {
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
         try {
-          // Always prompt for location permission in English
-          toast.info('Location access is needed for better service. Please allow location access when prompted.');
-
-          const hasPermission = await requestLocationPermission();
-
-          if (!hasPermission) {
-            toast.error('Location permission is required for better service. Please allow location access in your device settings or browser permissions.');
-            setLocationName(t('locationPermissionDenied'));
-            return;
-          }
-
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 60000,
-            });
-          });
-
-          // Reverse geocode
-          try {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`
-            );
-            const data = await res.json();
-            setLocationName(data.display_name || '');
-            toast.success(t('locationDetectedSuccess'));
-          } catch (geocodeError) {
-            console.error('Geocoding error:', geocodeError);
-            setLocationName(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
-          }
-        } catch (locationError) {
-          console.error('Location error:', locationError);
-          const error = locationError as GeolocationPositionError;
-
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              toast.error(showPermissionInstructions('location'));
-              setLocationName(t('locationPermissionDenied'));
-              break;
-            case error.POSITION_UNAVAILABLE:
-              toast.error(t('locationUnavailable'));
-              setLocationName(t('locationUnavailable'));
-              break;
-            case error.TIMEOUT:
-              toast.error(t('locationTimeout'));
-              setLocationName(t('locationTimeout'));
-              break;
-            default:
-              toast.error(t('locationError'));
-              setLocationName(t('locationError'));
-          }
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`
+          );
+          const data = await res.json();
+          setLocationName(data.display_name || '');
+          toast.success(t('locationDetectedSuccess'));
+        } catch (geocodeError) {
+          console.error('Geocoding error:', geocodeError);
+          setLocationName(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
         }
-      } else {
-        console.warn('Geolocation is not supported by this browser');
-        setLocationName(t('locationNotSupported'));
-        toast.info(t('locationServicesUnavailable'));
-      }
+      },
+      (error) => {
+        console.error(error);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  useEffect(() => {
+    askForLocation();
+  }, []);
+
+  useEffect(() => {
+    const handleFirstUserInteraction = () => {
+      askForLocation();
+      window.removeEventListener('click', handleFirstUserInteraction);
     };
 
-    detectLocation();
-  }, [t]);
+    window.addEventListener('click', handleFirstUserInteraction);
+
+    return () => {
+      window.removeEventListener('click', handleFirstUserInteraction);
+    };
+  }, []);
 
   // Memoize menu for performance
   const todaysMenu = useMemo<MenuItem[]>(
@@ -186,7 +155,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       return t('goodEvening');
     };
 
-    // ...inside your useEffect or wherever you create the greeting message:
     const greeting: ChatMessage = {
       id: `msg_${Date.now()}`,
       type: 'system',
@@ -262,9 +230,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     }
 
     try {
-      // Show camera permission prompt in English
-      toast.info('Camera access is needed to take photos. Please allow camera access when prompted.');
-      
       const context = getPWAContext();
       const hasPermission = await requestPermissions();
       setCameraPermission(hasPermission);
@@ -291,9 +256,11 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
           // For native or regular web, show camera modal
           setShowCamera(true);
         }
-        } else {
-          toast.error('Camera permission is required. Please allow camera access in your device settings or browser permissions.');
-        }
+      } else {
+        toast.error(
+          'Camera permission is required. Please allow camera access in your device settings or browser permissions.'
+        );
+      }
     } catch (error) {
       console.error('Camera open error:', error);
       toast.error(t('cameraOpenFailed'));
@@ -602,7 +569,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                   {t('photoUploaded')}
                 </>
               ) : (
-                t('uploadPhoto')
+                t('capturePhoto')
               )}
             </Button>
             <Button className="mt-2" variant="outline" onClick={() => setShowCamera(false)}>
@@ -719,7 +686,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                         ) : (
                           <>
                             <Camera className="w-5 h-5" />
-                            <span>{t('uploadPhoto')}</span>
+                            <span>{t('capturePhoto')}</span>
                           </>
                         )}
                       </Button>

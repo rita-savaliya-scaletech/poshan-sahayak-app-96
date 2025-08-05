@@ -4,7 +4,7 @@ import isEmpty from 'lodash/isEmpty';
 export const API_CONFIG = {
   addUser: 'teachers/create/',
   getUserData: 'teachers',
-  uploadFoodPhoto: 'verify-menu/',
+  uploadFoodPhoto: 'verify-menus/',
   feedbackQuestionnaire: 'survey',
 };
 
