@@ -510,7 +510,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       setTimeout(() => {
         onNavigateToHistory?.();
       }, 2000);
-    }, 500);
+    }, 1000);
   };
 
   return (
@@ -557,7 +557,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                 )}
               </Button>
               <Button className="ml-2" variant="outline" onClick={() => setShowCamera(false)}>
-                {t('back')}
+                {t('close')}
               </Button>
             </div>
           </div>

@@ -15,8 +15,8 @@ export const usePWAInstall = () => {
 
   useEffect(() => {
     // Check if app is already installed
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                         (window.navigator as any).standalone === true;
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
     setIsInstalled(isStandalone);
 
     if (!isStandalone) {
@@ -25,7 +25,7 @@ export const usePWAInstall = () => {
       const handleBeforeInstallPrompt = (e: Event) => {
         console.log('beforeinstallprompt event fired - browser will show native prompt');
         setDeferredPrompt(e as BeforeInstallPromptEvent);
-        
+
         // Allow browser to show native install prompt for a few seconds
         setTimeout(() => {
           // Store the event but don't prevent the native prompt
