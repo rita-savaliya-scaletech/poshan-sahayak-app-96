@@ -4,46 +4,40 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
-      // Common
       next: 'Next',
       back: 'Back',
       yes: 'Yes',
       no: 'No',
 
-      // Language Selection
       selectLanguage: 'Select Language',
       english: 'English',
       gujarati: 'ગુજરાતી',
 
-      // Greetings
       goodMorning: 'Good Morning',
       goodAfternoon: 'Good Afternoon',
       goodEvening: 'Good Evening',
-      greetingHelp: "I'm here to help track your meals today.",
-      greetingFull: '{{greeting}}! 👋 {{help}} {{question}} {{meal}}?', // <-- Add this line
+      greetingHelp: " I'm here to help track today’s government-provided meals.",
+      greetingFull: '{{greeting}}! 👋 {{help}}', // <-- Add this line
       date: 'Date',
       mealType: 'Meal Type',
       location: 'Location',
       uploadPhoto: 'Upload Photo',
-      // Chat Interface
-      todaysMenu: "Today's meal Menu",
+      uploading: 'Uploading...',
+      recapturePhoto: 'Recapture Photo',
+      photoUploaded: 'Photo Uploaded',
+      noItemsFoundRecapture:
+        "No items from today's menu were detected. Please recapture the photo for better analysis.",
+      todaysMenu: "Today's {{meal}} Menu",
       uploadFoodImage: 'Upload Food Image',
       capturePhoto: 'Capture Photo',
       selectFromGallery: 'Select from Gallery',
       analyzing: 'Analyzing food image...',
-      whatDidYouHave: 'What did you have for',
-
-      // Navigation
       chat: 'Chat',
       history: 'History',
       profile: 'Profile',
-
-      // Menu Items
       breakfast: 'Breakfast',
       lunch: 'Lunch',
       dinner: 'Dinner',
-
-      // Analysis
       itemsFound: 'Items Found',
       missingItems: 'Missing Items',
       nutritionInfo: 'Nutrition Information',
@@ -51,8 +45,6 @@ const resources = {
       protein: 'Protein',
       fat: 'Fat',
       carbs: 'Carbs',
-
-      // Profile
       school: 'School',
       teacherName: 'Teacher Name',
       schoolName: 'School Name',
@@ -61,15 +53,11 @@ const resources = {
       notifications: 'Notifications',
       helpSupport: 'Help & Support',
       settings: 'Settings',
-
-      // Navigation & Feedback
       feedbackSaved: 'Thank you! Your feedback has been saved successfully.',
       redirectingToHistory: 'Redirecting to history dashboard...',
       seeYouAtNextMeal: 'See you at {{nextMeal}} - Ready to track more healthy choices! 📊',
       feedbackSubmittedSuccess:
         'Thank you! Your feedback has been saved successfully. Keep nourishing those bright minds! 🧠💪',
-
-      // Toast Messages
       locationAccessNeeded:
         'Location access is needed to provide better service. Please allow location access when prompted.',
       locationDetectedSuccess: 'Location detected successfully!',
@@ -82,15 +70,11 @@ const resources = {
       imageAnalysisCompleted: 'Image analysis completed!',
       imageAnalysisFailed: 'Failed to analyze image. Please try again.',
       cameraOpenFailed: 'Failed to open camera. Please try again.',
-
-      // AI Messages
       great: 'Great',
       menuRecommendation: "Here's today's recommended meal menu based on your analysis:",
       analysisComplete: 'Analysis Complete',
-      feedbackIntro: "Now I have a few quick questions about your meal experience. Let's start:",
+      feedbackIntro: 'Now I have a few quick questions about today’s meal experience. Let’s get started! 😊',
       feedbackSubmitted: 'Feedback submitted successfully!',
-
-      // Feedback Questions
       question1: 'Did all students receive their meal in a timely manner?',
       question2: 'Can you comment on the freshness level of the food?',
       question3: 'Did the food quantity meet the needs of all the students?',
@@ -117,11 +101,7 @@ const resources = {
       q5opt3: 'Fair',
       q5opt4: 'Poor',
       gram: 'gram',
-
-      // App Name
       appName: 'Poshan Tracker',
-
-      // Additional Translations
       notSure: 'Not sure',
       veryTasty: 'Very tasty',
       okay: 'Okay',
@@ -129,7 +109,7 @@ const resources = {
       tooMuch: 'Too much',
       totalReports: 'Total Reports',
       sampleUserMenu: "Today's menu includes poha, some jalebi, and a glass of milk.",
-      aiPhotoPrompt: 'Can you take a photo of your meal so I can analyze the nutritional content? 📸',
+      aiPhotoPrompt: 'Can you take a photo of today’s meal so I can analyze the nutritional content? 📸',
       nutritionAssistant: 'Nutrition Assistant',
       tuverDalKhichdi: 'Tuver dal khichdi',
       golVadiFadaLapsi: 'Gol vadi fada lapsi',
@@ -145,8 +125,6 @@ const resources = {
       allDetectedItems: 'All detected food items',
       nutritionHighlights: 'Nutrition highlights',
       totalItems: 'total items',
-
-      // History Dashboard
       trackProgress: 'Track your meal reporting progress',
       filters: 'Filters',
       selectDate: 'Select date range',
@@ -166,8 +144,6 @@ const resources = {
       satisfaction: 'Satisfaction',
       completionRate: 'Completion Rate',
       studentsServed: 'Students Served',
-
-      // Profile Screen
       manageAccountInfo: 'Manage your account information',
       preferredLanguage: 'Preferred Language',
       activitySummary: 'Activity Summary',
@@ -177,54 +153,46 @@ const resources = {
       governmentOfGujarat: 'Government of Gujarat',
       ministryOfEducation: 'Ministry of Education',
       sarvaShikshaAbhiyan: 'Sarva Shiksha Abhiyan',
-
-      // Splash Screen
       gujaratEducationDepartment: 'Gujarat Education Department',
+      menuDetails: 'Menu Details',
+      extraItems: 'Extra Items',
+      noNutritionDetailsFound: 'No nutrition details found for the uploaded photo.',
     },
   },
   gu: {
     translation: {
-      // Common
       next: 'આગળ',
       back: 'પાછળ',
       yes: 'હા',
       no: 'ના',
-
-      // Language Selection
       selectLanguage: 'ભાષા પસંદ કરો',
       english: 'English',
       gujarati: 'ગુજરાતી',
-
-      // Greetings
       goodMorning: 'સુપ્રભાત',
       goodAfternoon: 'શુભ બપોર',
       goodEvening: 'શુભ સાંજ',
-      greetingHelp: 'હું આજે તમારા ભોજનને ટ્રેક કરવામાં મદદ કરવા માટે અહીં છું.',
-      greetingFull: '{{greeting}}! 👋 {{help}} {{question}} {{meal}}?', // <-- Add this line
+      greetingHelp: 'હું આજના સરકાર દ્વારા પૂરા પાડવામાં આવતા ભોજનનો ટ્રેક રાખવામાં મદદ કરવા માટે અહીં છું.',
+      greetingFull: '{{greeting}}! 👋 {{help}}', // <-- Add this line
       date: 'તારીખ',
       mealType: 'ભોજનનો પ્રકાર',
       location: 'સ્થાન',
       uploadPhoto: 'ફોટો અપલોડ કરો',
-
-      // Chat Interface
+      uploading: 'અપલોડ કરી રહ્યું છે...',
+      recapturePhoto: 'ફોટો પુનઃલોડ કરો',
+      photoUploaded: 'ફોટો અપલોડ થઈ ગયો',
+      noItemsFoundRecapture:
+        'આજના મેનૂમાંથી કોઈ આઇટમ મળી નથી. વધુ સારા વિશ્લેષણ માટે કૃપા કરીને ફોટો ફરીથી કેપ્ચર કરો.',
       todaysMenu: 'આજનું {{meal}} મેન્યુ',
       uploadFoodImage: 'ખોરાકની તસવીર અપલોડ કરો',
       capturePhoto: 'ફોટો લો',
       selectFromGallery: 'ગેલેરીમાંથી પસંદ કરો',
       analyzing: 'ખોરાકની તસવીરનું વિશ્લેષણ...',
-      whatDidYouHave: 'તમે શું લીધું હતું',
-
-      // Navigation
       chat: 'ચેટ',
       history: 'ઇતિહાસ',
       profile: 'પ્રોફાઇલ',
-
-      // Menu Items
       breakfast: 'નાસ્તો',
       lunch: 'મધ્યાહ્ન ભોજન',
       dinner: 'રાત્રિભોજન',
-
-      // Analysis
       itemsFound: 'મળેલી વસ્તુઓ',
       missingItems: 'ગુમ થયેલી વસ્તુઓ',
       nutritionInfo: 'પોષણ માહિતી',
@@ -232,8 +200,6 @@ const resources = {
       protein: 'પ્રોટીન',
       fat: 'ચરબી',
       carbs: 'કાર્બોહાઇડ્રેટ',
-
-      // Profile
       school: 'શાળા',
       teacherName: 'શિક્ષકનું નામ',
       schoolName: 'શાળાનું નામ',
@@ -242,13 +208,9 @@ const resources = {
       notifications: 'સૂચનાઓ',
       helpSupport: 'મદદ અને સપોર્ટ',
       settings: 'સેટિંગ્સ',
-
-      // Navigation & Feedback
       redirectingToHistory: 'ઇતિહાસ ડેશબોર્ડ પર રીડાયરેક્ટ કરી રહ્યાં છીએ...',
       seeYouAtNextMeal: '{{nextMeal}} પર મળીએ - વધુ સ્વાસ્થ્યપ્રદ પસંદગીઓ ટ્રેક કરવા માટે તૈયાર! 📊',
       feedbackSubmittedSuccess: 'આભાર! તમારો પ્રતિસાદ સફળતાપૂર્વક સાચવાયો છે. તે તેજસ્વી મનને પોષણ આપતા રહો! 🧠💪',
-
-      // Toast Messages
       locationAccessNeeded:
         'સ્થાન એક્સેસ જરૂરી છે જેથી વધુ સેવા આપવામાં મદદ કરી શકે. કૃપા કરીને જ્યારે પ્રમુખીત કરવામાં આવે ત્યારે સ્થાન એક્સેસ અનુમતિ આપો.',
       locationDetectedSuccess: 'સ્થાન સફળતાપૂર્વક શોધવામાં આવ્યું!',
@@ -261,14 +223,11 @@ const resources = {
       imageAnalysisCompleted: 'છબીનું વિશ્લેષણ પૂર્ણ થયું!',
       imageAnalysisFailed: 'છબીનું વિશ્લેષણ થતું નથી. કૃપા કરીને ફરી પ્રયાસ કરો.',
       cameraOpenFailed: 'કેમેરા ખોલવામાં થતું નથી. કૃપા કરીને ફરી પ્રયાસ કરો.',
-
-      // AI Messages
       great: 'શાનદાર',
       menuRecommendation: 'તમારા વિશ્લેષણના આધારે આજનું ભલામણ કરેલ ભોજન મેન્યુ અહીં છે:',
       analysisComplete: 'વિશ્લેષણ પૂર્ણ',
-      feedbackIntro: 'હવે મારી પાસે તમારા ભોજનના અનુભવ વિશે કેટલાક ઝડપી પ્રશ્નો છે. ચાલો શરૂ કરીએ:',
+      feedbackIntro: 'હવે આજના ભોજનના અનુભવ વિશે મારી પાસે થોડા ઝડપી પ્રશ્નો છે. ચાલો શરૂ કરીએ! 😊',
       feedbackSubmitted: 'પ્રતિસાદ સફળતાપૂર્વક સબમિટ થયો!',
-
       question1: 'શું બધા વિદ્યાર્થીઓને સમયસર ભોજન મળ્યું?',
       question2: 'શું તમે ખોરાકની તાજગીના સ્તર વિશે ટિપ્પણી કરી શકો છો?',
       question3: 'શું ખોરાકનો જથ્થો બધા વિદ્યાર્થીઓની જરૂરિયાતોને પૂર્ણ કરે છે?',
@@ -294,13 +253,9 @@ const resources = {
       q5opt2: 'સારો',
       q5opt3: 'સરેરાશ',
       q5opt4: 'ખરાબ',
-
-      // App Name
       appName: 'પોષણ ટ્રેકર',
-
-      // Additional Translations
       totalReports: 'કુલ અહેવાલો',
-      aiPhotoPrompt: 'શું તમે તમારા ભોજનનો ફોટો લઈ શકો છો જેથી હું પોષણનું વિશ્લેષણ કરી શકું? 📸',
+      aiPhotoPrompt: 'શું તમે આજના ભોજનનો ફોટો લઈ શકો છો જેથી હું પોષક તત્વોનું વિશ્લેષણ કરી શકું? 📸',
       nutritionAssistant: 'પોષણ સહાયક',
       tuverDalKhichdi: 'તુવેર દાળ ખીચડી',
       golVadiFadaLapsi: 'ગોળ વાડી ફડા લાપસી',
@@ -317,8 +272,6 @@ const resources = {
       allDetectedItems: 'બધી શોધાયેલ ખાદ્ય વસ્તુઓ',
       nutritionHighlights: 'પોષણ હાઇલાઇટ્સ',
       totalItems: 'કુલ વસ્તુઓ',
-
-      // History Dashboard
       trackProgress: 'તમારા ભોજન રિપોર્ટિંગ પ્રગતિને ટ્રેક કરો',
       filters: 'ફિલ્ટર્સ',
       selectDate: 'તારીખની રેન્જ પસંદ કરો',
@@ -338,8 +291,6 @@ const resources = {
       satisfaction: 'સંતુષ્ટિ',
       completionRate: 'પૂર્ણતા દર',
       studentsServed: 'વિદ્યાર્થીઓ પૂર્ણ કર્યા',
-
-      // Profile Screen
       manageAccountInfo: 'તમારા ખાતાની માહિતી સંચાલિત કરો',
       preferredLanguage: 'પસંદગીની ભાષા',
       activitySummary: 'પ્રવૃત્તિ સારાંશ',
@@ -349,9 +300,10 @@ const resources = {
       governmentOfGujarat: 'ગુજરાત સરકાર',
       ministryOfEducation: 'શિક્ષણ મંત્રાલય',
       sarvaShikshaAbhiyan: 'સર્વશીક્ષા અભિયાન',
-
-      // Splash Screen
       gujaratEducationDepartment: 'ગુજરાત શિક્ષણ વિભાગ',
+      menuDetails: 'મેન્યુ વિગતો',
+      extraItems: 'વધારાની વસ્તુઓ',
+      noNutritionDetailsFound: 'Nઅપલોડ કરેલા ફોટા માટે પોષણની કોઈ વિગતો મળી નથી.',
     },
   },
 };

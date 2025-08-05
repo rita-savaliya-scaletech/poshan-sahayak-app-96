@@ -57,9 +57,13 @@ interface IHttpParams extends IMiscellaneousRequestParams {
 const commonHttp = async (config: IHttpParams): Promise<any> => {
   const { method, url, data, contentType = 'application/json', isPublic = false } = config;
   const headers: Record<string, string> = {
-    'Content-Type': contentType,
     'ngrok-skip-browser-warning': '69420',
   };
+
+  // Don't set Content-Type header for FormData - let browser set it automatically with boundary
+  if (!(data instanceof FormData)) {
+    headers['Content-Type'] = contentType;
+  }
 
   // if end point is public than no need to provide access token
   if (!isPublic) {
@@ -73,7 +77,7 @@ const commonHttp = async (config: IHttpParams): Promise<any> => {
   }
 
   let body: any = null;
-  if (contentType === 'application/json') {
+  if (contentType === 'application/json' && !(data instanceof FormData)) {
     body = JSON.stringify(data);
   } else {
     body = data;
