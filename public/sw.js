@@ -1,43 +1,76 @@
-const CACHE_NAME = 'poshan-tracker-v1';
-const urlsToCache = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+// sw.js
+const CACHE_VERSION = 'v2'; // bump this on each deploy (e.g. v3, v4...)
+const CACHE_NAME = `poshan-tracker-${CACHE_VERSION}`;
+const CORE_ASSETS = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  // add any other static files you always want cached
+];
 
-// Install event - cache resources
 self.addEventListener('install', (event) => {
+  // Activate new SW as soon as it's installed
+  self.skipWaiting();
+
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('Opened cache');
-      return cache.addAll(urlsToCache);
+      return cache.addAll(CORE_ASSETS);
     })
   );
 });
 
-// Fetch event - serve from cache when offline
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Return cached version or fetch from network
-      return response || fetch(event.request);
-    })
-  );
-});
-
-// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
+  // Take control immediately and remove old caches
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => (key !== CACHE_NAME ? caches.delete(key) : Promise.resolve())));
+      await self.clients.claim();
+    })()
   );
 });
 
-// Handle background sync for offline functionality
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+
+  // For navigation requests (HTML pages), try network first (get latest index.html)
+  if (req.mode === 'navigate' || (req.method === 'GET' && req.headers.get('accept')?.includes('text/html'))) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          // Optionally update cache with fresh index.html
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
+          return res;
+        })
+        .catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // For other GET requests (assets), try cache first, fallback to network and update cache
+  if (req.method === 'GET') {
+    event.respondWith(
+      caches.match(req).then((cached) => {
+        if (cached) return cached;
+        return fetch(req)
+          .then((networkRes) => {
+            // Put a copy in cache for future
+            if (networkRes && networkRes.status === 200) {
+              const copy = networkRes.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+            }
+            return networkRes;
+          })
+          .catch(() => cached); // if network fails and no cached, it will resolve to undefined
+      })
+    );
+  }
+});
+
+// Optional: background sync handler (keep if you need it)
 self.addEventListener('sync', (event) => {
   if (event.tag === 'background-sync') {
     event.waitUntil(doBackgroundSync());
@@ -45,7 +78,6 @@ self.addEventListener('sync', (event) => {
 });
 
 function doBackgroundSync() {
-  // Handle any background sync tasks
-  console.log('Background sync triggered');
+  // handle background sync tasks
   return Promise.resolve();
 }
