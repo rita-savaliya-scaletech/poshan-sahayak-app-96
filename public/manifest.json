@@ -24,14 +24,6 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "360x640",
-      "type": "image/png",
-      "form_factor": "narrow"
-    }
-  ],
   "features": ["cross-platform", "offline-capable", "camera-access", "geolocation"],
   "permissions": ["camera", "geolocation", "location"],
   "related_applications": [],
