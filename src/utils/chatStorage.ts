@@ -1,23 +1,20 @@
-export interface ChatMessage {
-  id: string;
-  type: 'system' | 'user' | 'analysis' | 'questionnaire' | 'completion' | 'feedback_question' | 'menu_card';
-  content: any;
-  timestamp: Date;
-}
-
-export interface ChatSession {
-  id: string;
-  messages: ChatMessage[];
-  mealType: 'breakfast' | 'lunch' | 'dinner';
-  date: string;
-  analysisResult?: unknown;
-  questionnaireData?: unknown;
-  status: 'completed' | 'pending' | 'missed';
-  createdAt: Date;
-  completedAt?: Date;
-}
+import { ChatSession } from '@/components/interface';
 
 const STORAGE_KEY = 'poshan_chat_history';
+
+const MEAL_TIMES = {
+  BREAKFAST_START: 510, // 8:30
+  BREAKFAST_END: 570, // 9:30
+  LUNCH_START: 750, // 12:30
+  LUNCH_END: 810, // 13:30
+  DINNER_START: 960, // 4:00 PM
+};
+
+const MEAL_LABELS = {
+  breakfast: 'breakfasts',
+  lunch: 'lunch',
+  dinner: 'dinners',
+};
 
 export const saveChatSession = (session: ChatSession): void => {
   try {
@@ -95,32 +92,97 @@ export const generateSessionId = (): string => {
   return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-export const getMealTypeFromTime = (): 'breakfast' | 'lunch' | 'dinner' | null => {
-  const now = new Date();
-  const hour = now.getHours();
-  const minutes = now.getMinutes();
-  const totalMinutes = hour * 60 + minutes;
+const toMinutes = (date: Date) => date.getHours() * 60 + date.getMinutes();
+export const getMealTypeFromTime = (now = new Date()): keyof typeof MEAL_LABELS | null => {
+  const mins = toMinutes(now);
+  const { BREAKFAST_START, LUNCH_START, DINNER_START } = MEAL_TIMES;
 
-  // if (totalMinutes >= 510 && totalMinutes < 570) return 'breakfast'; // 8:30 – 9:30
-  // if (totalMinutes >= 750 && totalMinutes < 810) return 'lunch'; // 12:30 – 1:30
-
-  // return null; // Outside of meal time
-
-  // Breakfast: 8:30 AM – 12:30 PM (510 – 750)
-  if (totalMinutes >= 510 && totalMinutes < 750) {
-    return 'breakfast';
-  }
-
-  // Lunch: 12:30 PM – 4:00 PM (750 – 960)
-  if (totalMinutes >= 750 && totalMinutes < 960) {
-    return 'lunch';
-  }
-
-  // Dinner: 4:00 PM – 8:30 AM next day (960 – 1440 and 0 – 510)
-  if (totalMinutes >= 960 || totalMinutes < 510) {
-    return 'dinner';
-  }
-
-  // Fallback
-  return null;
+  if (mins >= BREAKFAST_START && mins < LUNCH_START) return 'breakfast';
+  if (mins >= LUNCH_START && mins < DINNER_START) return 'lunch';
+  return 'dinner';
 };
+
+export const getMealInfo = (now = new Date()) => {
+  const mins = toMinutes(now);
+  const { BREAKFAST_START, BREAKFAST_END, LUNCH_START, LUNCH_END } = MEAL_TIMES;
+
+  if (mins < BREAKFAST_START) {
+    return { currentMealKey: null, nextMealKey: MEAL_LABELS.breakfast, nextMealTime: '8:30 – 9:30 AM' };
+  }
+  if (mins <= BREAKFAST_END) {
+    return { currentMealKey: MEAL_LABELS.breakfast, nextMealKey: MEAL_LABELS.lunch, nextMealTime: '12:30 – 1:30 PM' };
+  }
+  if (mins < LUNCH_START) {
+    return { currentMealKey: null, nextMealKey: MEAL_LABELS.lunch, nextMealTime: '12:30 – 1:30 PM' };
+  }
+  if (mins <= LUNCH_END) {
+    return { currentMealKey: MEAL_LABELS.lunch, nextMealKey: MEAL_LABELS.breakfast, nextMealTime: '8:30 – 9:30 AM' };
+  }
+  return { currentMealKey: null, nextMealKey: MEAL_LABELS.breakfast, nextMealTime: '8:30 – 9:30 AM' };
+};
+
+// Build localized placeholders for completed meal
+export const buildPlaceholdersForCompleted = (t: any, completedMealKey: string | null) => {
+  // completedMealKey is expected to be e.g. 'breakfasts' or 'lunch'
+  const { nextMealKey, nextMealTime } = getMealInfo();
+
+  // localize meal names
+  const completedMealLabel = completedMealKey ? t(completedMealKey) : '';
+  let nextMealLabel = nextMealKey ? t(nextMealKey) : '';
+
+  // If the user completed lunch, the next breakfast occurs tomorrow — prefix with `tomorrow`
+  if (completedMealKey === 'lunch') {
+    nextMealLabel = `${t('tomorrow')} ${t('breakfasts')}`; // "કાલે નાસ્તા"
+  }
+
+  return {
+    currentMeal: completedMealLabel,
+    nextMeal: nextMealLabel,
+    nextMealTime,
+  };
+};
+
+// Helper to get dynamic greeting
+export const getDynamicGreeting = (t: any) => {
+  const hour = new Date().getHours();
+  if (hour < 12) return t('goodMorning');
+  if (hour < 17) return t('goodAfternoon');
+  return t('goodEvening');
+};
+
+export const askForLocation = (): Promise<string> => {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve('');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`
+          );
+          const data = await res.json();
+          resolve(
+            data.display_name || `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`
+          );
+        } catch (geocodeError) {
+          console.error('Geocoding error:', geocodeError);
+          resolve(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
+        }
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        resolve('');
+      },
+      { enableHighAccuracy: true }
+    );
+  });
+};
+
+export const isMobile = (): boolean =>
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+export const isIOSDevice = (): boolean =>
+  /iPhone|iPad|iPod|iPad Simulator|iPhone Simulator|iPod Simulator/i.test(navigator.userAgent);

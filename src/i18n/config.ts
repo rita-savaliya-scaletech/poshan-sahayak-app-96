@@ -14,7 +14,8 @@ const resources = {
       goodMorning: 'Good Morning',
       goodAfternoon: 'Good Afternoon',
       goodEvening: 'Good Evening',
-      greetingHelp: " I'm here to help track today’s government-provided meals.",
+      greetingHelp:
+        ' Today I will help you here to keep track of and provide feedback on the student meals provided by the government.',
       greetingFull: '{{greeting}}! 👋 {{help}}', // <-- Add this line
       date: 'Date',
       mealType: 'Meal Type',
@@ -33,6 +34,7 @@ const resources = {
       history: 'History',
       profile: 'Profile',
       breakfast: 'Breakfast',
+      breakfasts: 'Breakfast',
       lunch: 'Lunch',
       dinner: 'Dinner',
       itemsFound: 'Items Found',
@@ -52,9 +54,9 @@ const resources = {
       settings: 'Settings',
       feedbackSaved: 'Thank you! Your feedback has been saved successfully.',
       redirectingToHistory: 'Redirecting to history dashboard...',
-      seeYouAtNextMeal: 'See you at {{nextMeal}} - Ready to track more healthy choices! 📊',
-      feedbackSubmittedSuccess:
-        'Thank you! Your feedback has been saved successfully. Keep nourishing those bright minds! 🧠💪',
+      seeYouAtNextMeal:
+        'Thanks for your feedback on {{nextMeal}}! 🌟 See you later for {{currentMeal}} ({{nextMealTime}}) — fuel up for the day with nutritious food! 📊',
+      feedbackSubmittedSuccess: 'Thank you! Your feedback has been saved successfully.',
       locationAccessNeeded: 'Location access is needed to provide better service. Please allow location access.',
       locationDetectedSuccess: 'Location detected successfully!',
       locationPermissionDenied: 'Location access denied',
@@ -153,6 +155,9 @@ const resources = {
       menuDetails: 'Menu Details',
       extraItems: 'Extra Items',
       noNutritionDetailsFound: 'No nutrition details found for the uploaded photo.',
+      seeYouTomorrow: "Thanks for participating in today's track – made the day a success with nutritious choices! 🌟",
+      tomorrow: 'Tomorrow',
+      seeYouAgain: 'see you again in time – get ready to record new healthy choices! 📊',
     },
   },
   gu: {
@@ -165,18 +170,19 @@ const resources = {
       goodMorning: 'સુપ્રભાત',
       goodAfternoon: 'શુભ બપોર',
       goodEvening: 'શુભ સાંજ',
-      greetingHelp: 'હું આજના સરકાર દ્વારા પૂરા પાડવામાં આવતા ભોજનનો ટ્રેક રાખવામાં મદદ કરવા માટે અહીં છું.',
+      greetingHelp:
+        'આજે સરકાર દ્વારા આપવામાં આવેલ વિદ્યાર્થીઓના ભોજન વિશે ટ્રેક રાખવા અને ફીડબેક આપવા માટે હું અહીં તમારી મદદ કરીશ.',
       greetingFull: '{{greeting}}! 👋 {{help}}', // <-- Add this line
       date: 'તારીખ',
       mealType: 'ભોજનનો પ્રકાર',
       location: 'સ્થાન',
       capturePhoto: 'ફોટો કેપ્ચર કરો',
-      uploading: 'અપલોડ કરી રહ્યું છે...',
+      uploading: 'અપલોડ થઈ રહ્યું છે...',
       recapturePhoto: 'ફોટો પુનઃ કેપ્ચર કરો',
       photoUploaded: 'ફોટો અપલોડ થઈ ગયો',
       noItemsFoundRecapture:
         'આજના મેનૂમાંથી કોઈ આઇટમ મળી નથી. વધુ સારા વિશ્લેષણ માટે કૃપા કરીને ફોટો ફરીથી કેપ્ચર કરો.',
-      todaysMenu: 'આજનું {{meal}} મેન્યુ',
+      todaysMenu: 'આજનું {{meal}} નું મેન્યુ',
       uploadFoodImage: 'ખોરાકની તસવીર અપલોડ કરો',
       selectFromGallery: 'ગેલેરીમાંથી પસંદ કરો',
       analyzing: 'ખોરાકની તસવીરનું વિશ્લેષણ...',
@@ -184,6 +190,7 @@ const resources = {
       history: 'ઇતિહાસ',
       profile: 'પ્રોફાઇલ',
       breakfast: 'નાસ્તો',
+      breakfasts: 'નાસ્તા',
       lunch: 'મધ્યાહ્ન ભોજન',
       dinner: 'રાત્રિભોજન',
       itemsFound: 'મળેલી વસ્તુઓ',
@@ -202,9 +209,9 @@ const resources = {
       helpSupport: 'મદદ અને સપોર્ટ',
       settings: 'સેટિંગ્સ',
       redirectingToHistory: 'ઇતિહાસ ડેશબોર્ડ પર રીડાયરેક્ટ કરી રહ્યાં છીએ...',
-      seeYouAtNextMeal: '{{nextMeal}} પર મળીએ - વધુ સ્વાસ્થ્યપ્રદ પસંદગીઓ ટ્રેક કરવા માટે તૈયાર! 📊',
-      feedbackSubmittedSuccess:
-        'આભાર! તમારો પ્રતિસાદ સફળતાપૂર્વક નોંધી લેવામાં આવ્યો છે. તે તેજસ્વી મનને પોષણ આપતા રહો! 🧠💪',
+      seeYouAtNextMeal:
+        ' {{currentMeal}} પર પ્રતિસાદ આપવા બદલ આભાર! 🌟 હવે {{nextMeal}} ({{nextMealTime}}) પર મળીએ — પૌષ્ટિક ખોરાક સાથે દિવસને એનર્જી આપીએ! 📊',
+      feedbackSubmittedSuccess: 'આભાર! તમારો પ્રતિસાદ સફળતાપૂર્વક નોંધી લેવામાં આવ્યો છે.',
       locationAccessNeeded:
         'લોકેશન એક્સેસ જરૂરી છે જેથી વધુ સેવા આપવામાં મદદ કરી શકે. કૃપા કરીને લોકેશન એક્સેસ અનુમતિ આપો.',
       locationDetectedSuccess: 'લોકેશન સફળતાપૂર્વક શોધવામાં આવ્યું!',
@@ -298,6 +305,9 @@ const resources = {
       menuDetails: 'મેન્યુ વિગતો',
       extraItems: 'વધારાની વસ્તુઓ',
       noNutritionDetailsFound: 'અપલોડ કરેલા ફોટા માટે પોષણની કોઈ વિગતો મળી નથી.',
+      seeYouTomorrow: 'આજના ટ્રેકિંગમાં ભાગ લેવા બદલ આભાર – પૌષ્ટિક પસંદગીઓ સાથે દિવસ સફળ બનાવ્યો! 🌟',
+      tomorrow: 'કાલે',
+      seeYouAgain: 'સમયે ફરી મળીએ – નવી હેલ્ધી ચોઇસીસ નોંધવા તૈયાર રહો! 📊',
     },
   },
 };

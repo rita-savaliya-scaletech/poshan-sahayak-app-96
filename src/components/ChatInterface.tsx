@@ -4,20 +4,22 @@ import Webcam from 'react-webcam';
 import { Camera, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
+  askForLocation,
+  buildPlaceholdersForCompleted,
   generateSessionId,
+  getDynamicGreeting,
+  getMealInfo,
   getMealTypeFromTime,
   getSessionForMealToday,
   saveChatSession,
   updateChatSession,
-  type ChatMessage,
-  type ChatSession,
 } from '@/utils/chatStorage';
-import { getPWAContext, requestLocationPermission, showPermissionInstructions } from '@/utils/pwaUtils';
+import { getPWAContext } from '@/utils/pwaUtils';
 import { Button } from '@/components/ui/button';
 import { useCamera } from '@/hooks/useCamera';
 import { API_CONFIG } from '@/shared/api';
 import HttpService from '@/shared/services/Http.service';
-import { ChatInterfaceProps, MenuItem } from './interface';
+import { ChatInterfaceProps, ChatMessage, ChatSession, MenuItem } from './interface';
 
 const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const webcamRef = useRef<Webcam>(null);
@@ -43,30 +45,18 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const [imageUploaded, setImageUploaded] = useState(false);
   const [activeUploadButton, setActiveUploadButton] = useState<'main' | 'recapture' | null>(null);
 
-  const askForLocation = async () => {
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`
-          );
-          const data = await res.json();
-          setLocationName(data.display_name || '');
-        } catch (geocodeError) {
-          console.error('Geocoding error:', geocodeError);
-          setLocationName(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
-        }
-      },
-      (error) => {
-        console.error(error);
-      },
-      { enableHighAccuracy: true }
-    );
-  };
-
+  // get location on mount
   useEffect(() => {
-    askForLocation();
+    (async () => {
+      const location = await askForLocation();
+      setLocationName(location);
+    })();
   }, []);
+
+  // Auto-scroll
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
 
   // Memoize menu for performance
   const todaysMenu = useMemo<MenuItem[]>(
@@ -77,36 +67,23 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     ],
     [t]
   );
-
-  // Auto-scroll
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
-
-  const getNextMealTime = () => {
-    const now = new Date();
-    const hour = now.getHours();
-    const minutes = now.getMinutes();
-    const totalMinutes = hour * 60 + minutes;
-
-    // Breakfast: 8:30 – 9:30, Lunch: 12:30 – 1:30
-    if (totalMinutes < 510) return `${t('breakfast')} (8:30 – 9:30 AM)`;
-    if (totalMinutes < 750) return `${t('lunch')} (12:30 – 1:30 PM)`;
-    return `${t('breakfast')} (8:30 – 9:30 AM)`; // Next day
-  };
-
   // Simulate conversation on load
   useEffect(() => {
-    // Get next meal time for message
-    const nextMealTime = getNextMealTime();
+    const { currentMealKey: inferredCurrent, nextMealKey, nextMealTime } = getMealInfo();
+    const now = new Date();
+    const totalMinutes = now.getHours() * 60 + now.getMinutes();
+    const afterLunch = totalMinutes > 810;
 
-    // If outside meal time OR already completed for this meal, show "See you at next meal" message
+    // If user hasn't selected a meal session (no mealType), show next-meal or tomorrow message
     if (!mealType) {
+      const { currentMeal, nextMeal } = buildPlaceholdersForCompleted(t, null);
       const seeYouMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         type: 'completion',
         content: {
-          text: t('seeYouAtNextMeal', { nextMeal: nextMealTime }),
+          text: afterLunch
+            ? `${t('seeYouTomorrow')}\n${t('tomorrow')} ${t('breakfasts')} ${t('seeYouAgain')}`
+            : t('seeYouAtNextMeal', { currentMeal, nextMeal, nextMealTime }),
         },
         timestamp: new Date(),
       };
@@ -115,13 +92,26 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       return;
     }
 
+    // If there's an existing session for this meal
     const existingSession = getSessionForMealToday(mealType);
     if (existingSession && existingSession.status === 'completed') {
+      // Use the completed meal from the session to craft message
+      const completedMealKey =
+        existingSession.mealType === 'breakfast' ? 'breakfasts' : existingSession.mealType ?? null; // e.g. 'breakfasts' or 'lunch'
+      const placeholders = buildPlaceholdersForCompleted(t, completedMealKey);
+
       const alreadyCompletedMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         type: 'completion',
         content: {
-          text: t('seeYouAtNextMeal', { nextMeal: nextMealTime }),
+          text:
+            afterLunch && completedMealKey === 'lunch'
+              ? `${t('seeYouTomorrow')}\n${t('tomorrow')} ${t('breakfasts')} ${t('seeYouAgain')}`
+              : t('seeYouAtNextMeal', {
+                  currentMeal: placeholders.currentMeal,
+                  nextMeal: placeholders.nextMeal,
+                  nextMealTime: placeholders.nextMealTime,
+                }),
         },
         timestamp: new Date(),
       };
@@ -133,20 +123,12 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     // If no existing session or outside meal time, start normal flow
     const sessionId = generateSessionId();
 
-    // Helper to get dynamic greeting
-    const getDynamicGreeting = () => {
-      const hour = new Date().getHours();
-      if (hour < 12) return t('goodMorning');
-      if (hour < 17) return t('goodAfternoon');
-      return t('goodEvening');
-    };
-
     const greeting: ChatMessage = {
       id: `msg_${Date.now()}`,
       type: 'system',
       content: {
         text: t('greetingFull', {
-          greeting: getDynamicGreeting(),
+          greeting: getDynamicGreeting(t),
           help: t('greetingHelp'),
         }),
       },
@@ -194,7 +176,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     };
     setCurrentSession(newSession);
     saveChatSession(newSession);
-  }, [t, todaysMenu]);
+  }, [mealType, t, todaysMenu]);
 
   // Typing indicator component
   const TypingIndicator = () => (
@@ -208,84 +190,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       </div>
     </div>
   );
-
-  const handleOpenCamera = async () => {
-    setActiveUploadButton('main');
-    if (isUploading || imageUploaded) {
-      return; // Prevent opening camera if already uploading or image already uploaded
-    }
-
-    try {
-      const context = getPWAContext();
-      const hasPermission = await requestPermissions();
-      setCameraPermission(hasPermission);
-
-      if (hasPermission) {
-        if (context.isPWA && context.platform === 'web') {
-          // For PWA on web, use file input with camera capture
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = 'image/*';
-          input.capture = 'environment';
-          input.onchange = async (event) => {
-            const file = (event.target as HTMLInputElement).files?.[0];
-            if (file) {
-              const reader = new FileReader();
-              reader.onload = () => {
-                handleImageUpload(reader.result as string);
-              };
-              reader.readAsDataURL(file);
-            }
-          };
-          input.click();
-        } else {
-          // For native or regular web, show camera modal
-          setShowCamera(true);
-        }
-      } else {
-        toast.error(
-          'Camera permission is required. Please allow camera access in your device settings or browser permissions.'
-        );
-      }
-    } catch (error) {
-      console.error('Camera open error:', error);
-      toast.error(t('cameraOpenFailed'));
-    }
-  };
-
-  const handleRecapture = async () => {
-    setActiveUploadButton('recapture');
-    setImageUploaded(false);
-    setUploadError(false);
-    setIsUploading(false);
-    await handleOpenCamera();
-  };
-
-  const getSurveyQuestion = async () => {
-    const response = await HttpService.get(`${API_CONFIG.feedbackQuestionnaire}/${i18n.language}`);
-    setFeedbackQuestions(response.questions);
-  };
-
-  const startFeedbackFlow = () => {
-    setTimeout(() => {
-      setIsTyping(true);
-
-      setTimeout(() => {
-        setIsTyping(false);
-        const feedbackStart: ChatMessage = {
-          id: `msg_${Date.now()}_feedback_start`,
-          type: 'system',
-          content: {
-            text: t('feedbackIntro'),
-          },
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, feedbackStart]);
-
-        setTimeout(() => setFeedbackStep(1), 1000); // Start from first question
-      }, 1500);
-    }, 500);
-  };
 
   // Camera capture handler
   const handleTakePhoto = () => {
@@ -426,13 +330,83 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     }
   };
 
-  useEffect(() => {
-    // Remove the upper bound check so askNextQuestion runs when feedbackStep > feedbackQuestions.length
-    if (feedbackStep > 0) {
-      askNextQuestion();
+  const handleOpenCamera = async () => {
+    setActiveUploadButton('main');
+    if (isUploading || imageUploaded) {
+      return; // Prevent opening camera if already uploading or image already uploaded
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedbackStep]);
+
+    try {
+      const context = getPWAContext();
+      const hasPermission = await requestPermissions();
+      setCameraPermission(hasPermission);
+
+      if (hasPermission) {
+        if (context.isPWA && context.platform === 'web') {
+          // For PWA on web, use file input with camera capture
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.capture = 'environment';
+          input.onchange = async (event) => {
+            const file = (event.target as HTMLInputElement).files?.[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = () => {
+                handleImageUpload(reader.result as string);
+              };
+              reader.readAsDataURL(file);
+            }
+          };
+          input.click();
+        } else {
+          // For native or regular web, show camera modal
+          setShowCamera(true);
+        }
+      } else {
+        toast.error(
+          'Camera permission is required. Please allow camera access in your device settings or browser permissions.'
+        );
+      }
+    } catch (error) {
+      console.error('Camera open error:', error);
+      toast.error(t('cameraOpenFailed'));
+    }
+  };
+
+  const handleRecapture = async () => {
+    setActiveUploadButton('recapture');
+    setImageUploaded(false);
+    setUploadError(false);
+    setIsUploading(false);
+    await handleOpenCamera();
+  };
+
+  const getSurveyQuestion = async () => {
+    const response = await HttpService.get(`${API_CONFIG.feedbackQuestionnaire}/${i18n.language}`);
+    setFeedbackQuestions(response.questions);
+  };
+
+  const startFeedbackFlow = () => {
+    setTimeout(() => {
+      setIsTyping(true);
+
+      setTimeout(() => {
+        setIsTyping(false);
+        const feedbackStart: ChatMessage = {
+          id: `msg_${Date.now()}_feedback_start`,
+          type: 'system',
+          content: {
+            text: t('feedbackIntro'),
+          },
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, feedbackStart]);
+
+        setTimeout(() => setFeedbackStep(1), 1000); // Start from first question
+      }, 1500);
+    }, 500);
+  };
 
   const askNextQuestion = () => {
     if (feedbackStep <= feedbackQuestions.length) {
@@ -512,6 +486,14 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       }, 2000);
     }, 1000);
   };
+
+  useEffect(() => {
+    // Remove the upper bound check so askNextQuestion runs when feedbackStep > feedbackQuestions.length
+    if (feedbackStep > 0) {
+      askNextQuestion();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedbackStep]);
 
   return (
     <div className="flex flex-col h-full max-w-4xl mx-auto">
@@ -605,7 +587,9 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                 <div className="flex justify-start mb-3">
                   <div className="message-bubble-ai rounded-xl p-4 shadow max-w-xs">
                     <div className="mb-2 font-semibold">
-                      <h4 className="font-semibold text-sm mb-2">📋 {t('todaysMenu', { meal: t(mealType) })}</h4>
+                      <h4 className="font-semibold text-sm mb-2">
+                        📋 {t('todaysMenu', { meal: t(mealType === 'breakfast' ? 'breakfasts' : mealType) })}
+                      </h4>
                     </div>
                     <div className="mb-2 text-xs text-muted-foreground">
                       <div>
@@ -696,24 +680,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                           </>
                         )}
                       </Button>
-                    )}
-
-                    {/* ...existing menu rendering... */}
-                    {message?.content?.showMenu && message?.content?.menu && (
-                      <div className="mt-3 bg-background/80 rounded-lg p-3 border border-border/50">
-                        <h4 className="font-semibold text-sm mb-2">📋 {t('todaysMenu', { meal: t(mealType) })}</h4>
-                        <div className="space-y-2">
-                          {message?.content?.menu.map((item: MenuItem, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between text-sm">
-                              <span className="flex items-center">
-                                <span className="mr-2">{item.emoji}</span>
-                                {item.name}
-                              </span>
-                              <span className="text-muted-foreground">{item.quantity}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
                     )}
 
                     <div className="flex items-center justify-start mt-1">

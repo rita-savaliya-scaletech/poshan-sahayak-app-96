@@ -131,9 +131,33 @@ Soft, friendly, government-approved design with pastel backgrounds.
 
   body {
     @apply bg-background text-foreground;
-    max-width: 768px;
     margin: 0 auto;
     min-width: 320px;
+  }
+
+  /* For Chrome, Edge, and Safari */
+  ::-webkit-scrollbar {
+    width: 12px; /* scrollbar width */
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f0f0f0; /* track background */
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: #2eb85c; /* thumb color */
+    border-radius: 6px; /* rounded corners */
+    border: 3px solid #f0f0f0; /* space around thumb */
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #26a14e; /* darker on hover */
+  }
+
+  /* For Firefox */
+  * {
+    scrollbar-width: thin; /* thin scrollbar */
+    scrollbar-color: #2eb85c #f0f0f0; /* thumb color track color */
   }
 }
 
