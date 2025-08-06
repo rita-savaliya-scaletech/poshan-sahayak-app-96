@@ -180,3 +180,9 @@ export const askForLocation = (): Promise<string> => {
     );
   });
 };
+
+export const isMobile = (): boolean =>
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+export const isIOSDevice = (): boolean =>
+  /iPhone|iPad|iPod|iPad Simulator|iPhone Simulator|iPod Simulator/i.test(navigator.userAgent);
