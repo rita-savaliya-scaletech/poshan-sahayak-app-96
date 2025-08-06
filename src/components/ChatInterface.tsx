@@ -4,13 +4,14 @@ import Webcam from 'react-webcam';
 import { Camera, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  askForLocation,
   buildPlaceholdersForCompleted,
   generateSessionId,
   getDynamicGreeting,
   getMealInfo,
   getMealTypeFromTime,
   getSessionForMealToday,
+  requestCameraPermission,
+  requestLocationPermission,
   saveChatSession,
   updateChatSession,
 } from '@/utils/chatStorage';
@@ -20,8 +21,10 @@ import { useCamera } from '@/hooks/useCamera';
 import { API_CONFIG } from '@/shared/api';
 import HttpService from '@/shared/services/Http.service';
 import { ChatInterfaceProps, ChatMessage, ChatSession, MenuItem } from './interface';
+import { dayNames, weeklyMenu } from './constants';
 
 const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
+  const todayKey = dayNames[new Date().getDay()];
   const webcamRef = useRef<Webcam>(null);
   const mealType = getMealTypeFromTime();
   const { t } = useTranslation();
@@ -45,12 +48,27 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const [imageUploaded, setImageUploaded] = useState(false);
   const [activeUploadButton, setActiveUploadButton] = useState<'main' | 'recapture' | null>(null);
 
-  // get location on mount
+  const todaysMenu = useMemo<MenuItem[]>(
+    () =>
+      weeklyMenu[todayKey].map((item) => ({
+        name: t(item.name[i18n.language]), // switch to .gu for Gujarati
+        quantity: item.quantity,
+        emoji: item.emoji,
+      })),
+    [t, todayKey]
+  );
+  // Location permission — run on mount
+  const fetchLocation = async () => {
+    const location = await requestLocationPermission(i18n.language === 'gu' ? 'gu' : 'en');
+    if (location.granted) {
+      setLocationName(location.displayName);
+    } else {
+      setLocationName(''); // Or a t('locationUnavailable') fallback
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      const location = await askForLocation();
-      setLocationName(location);
-    })();
+    fetchLocation();
   }, []);
 
   // Auto-scroll
@@ -58,15 +76,6 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // Memoize menu for performance
-  const todaysMenu = useMemo<MenuItem[]>(
-    () => [
-      { name: t('tuverDalKhichdi'), quantity: '100', emoji: '🍛' },
-      { name: t('golVadiFadaLapsi'), quantity: '35', emoji: '🍚' },
-      { name: t('seasonalGreenVegetables'), quantity: '50', emoji: '🥬' },
-    ],
-    [t]
-  );
   // Simulate conversation on load
   useEffect(() => {
     const { currentMealKey: inferredCurrent, nextMealKey, nextMealTime } = getMealInfo();
@@ -330,42 +339,20 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     }
   };
 
+  // Camera permission — run when user clicks capture
   const handleOpenCamera = async () => {
     setActiveUploadButton('main');
-    if (isUploading || imageUploaded) {
-      return; // Prevent opening camera if already uploading or image already uploaded
-    }
+    if (isUploading || imageUploaded) return;
 
     try {
-      const context = getPWAContext();
-      const hasPermission = await requestPermissions();
+      const hasPermission = await requestCameraPermission();
       setCameraPermission(hasPermission);
 
       if (hasPermission) {
-        if (context.isPWA && context.platform === 'web') {
-          // For PWA on web, use file input with camera capture
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = 'image/*';
-          input.capture = 'environment';
-          input.onchange = async (event) => {
-            const file = (event.target as HTMLInputElement).files?.[0];
-            if (file) {
-              const reader = new FileReader();
-              reader.onload = () => {
-                handleImageUpload(reader.result as string);
-              };
-              reader.readAsDataURL(file);
-            }
-          };
-          input.click();
-        } else {
-          // For native or regular web, show camera modal
-          setShowCamera(true);
-        }
+        setShowCamera(true); // Show camera modal or PWA file input
       } else {
         toast.error(
-          'Camera permission is required. Please allow camera access in your device settings or browser permissions.'
+          t('cameraPermissionRequired') // Or plain text string
         );
       }
     } catch (error) {
@@ -587,30 +574,27 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                 <div className="flex justify-start mb-3">
                   <div className="message-bubble-ai rounded-xl p-4 shadow max-w-xs">
                     <div className="mb-2 font-semibold">
-                      <h4 className="font-semibold text-sm mb-2">
+                      <h4 className="font-semibold mb-2">
                         📋 {t('todaysMenu', { meal: t(mealType === 'breakfast' ? 'breakfasts' : mealType) })}
                       </h4>
                     </div>
-                    <div className="mb-2 text-xs text-muted-foreground">
-                      <div>
-                        <span className="font-medium">
-                          {t('date')}: {new Date().toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-medium">
-                          {t('mealType')}: {t(mealType)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-medium">
-                          {t('location')}: {locationName || t('detectingLocation', 'Detecting...')}
-                        </span>
-                      </div>
+                    <div className="mb-2 text-sm text-muted-foreground">
+                      <p>
+                        <span className="font-bold">{t('date')} :</span>{' '}
+                        <span className="font-medium">{new Date().toLocaleDateString()}</span>
+                      </p>
+                      <p>
+                        <span className="font-bold">{t('mealType')} :</span>{' '}
+                        <span className="font-medium">{t(mealType)}</span>
+                      </p>
+                      <p>
+                        <span className="font-bold">{t('location')} :</span>{' '}
+                        <span className="font-medium">{locationName || 'Detecting...'}</span>
+                      </p>
                     </div>
                     <div className="mb-3">
                       {message?.content?.menu.map((item: MenuItem, idx: number) => (
-                        <div key={idx} className="flex items-center text-sm mb-1">
+                        <div key={idx} className="flex items-center text-[16px] mb-1">
                           <span className="mr-2">{item.emoji}</span>
                           <span>
                             {item.name} - {item.quantity} {t('gram')}
@@ -732,7 +716,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
                                 {nutrition && typeof nutrition === 'object' && (
                                   <div className="space-y-1">
                                     {Object.entries(nutrition).map(([nutrient, value], nutrientIdx) => (
-                                      <div key={nutrientIdx} className="flex justify-between items-center text-xs">
+                                      <div key={nutrientIdx} className="flex justify-between items-center text-sm">
                                         <span className="text-muted-foreground capitalize">{nutrient}:</span>
                                         <span className="font-medium">{String(value)}</span>
                                       </div>

@@ -15,7 +15,7 @@ const resources = {
       goodAfternoon: 'Good Afternoon',
       goodEvening: 'Good Evening',
       greetingHelp:
-        ' Today I will help you here to keep track of and provide feedback on the student meals provided by the government.',
+        'Today I will help you here to keep track of and provide feedback on the student meals provided by the government.',
       greetingFull: '{{greeting}}! 👋 {{help}}', // <-- Add this line
       date: 'Date',
       mealType: 'Meal Type',
@@ -171,7 +171,7 @@ const resources = {
       goodAfternoon: 'શુભ બપોર',
       goodEvening: 'શુભ સાંજ',
       greetingHelp:
-        'આજે સરકાર દ્વારા આપવામાં આવેલ વિદ્યાર્થીઓના ભોજન વિશે ટ્રેક રાખવા અને ફીડબેક આપવા માટે હું અહીં તમારી મદદ કરીશ.',
+        'સરકાર દ્વારા આપવામાં આવેલ વિદ્યાર્થીઓના ભોજન વિશે ટ્રેક રાખવા અને ફીડબેક આપવા માટે હું અહીં તમારી મદદ કરીશ.',
       greetingFull: '{{greeting}}! 👋 {{help}}', // <-- Add this line
       date: 'તારીખ',
       mealType: 'ભોજનનો પ્રકાર',
@@ -191,7 +191,7 @@ const resources = {
       profile: 'પ્રોફાઇલ',
       breakfast: 'નાસ્તો',
       breakfasts: 'નાસ્તા',
-      lunch: 'મધ્યાહ્ન ભોજન',
+      lunch: 'મધ્યાહન ભોજન',
       dinner: 'રાત્રિભોજન',
       itemsFound: 'મળેલી વસ્તુઓ',
       missingItems: 'ના મળેલી વસ્તુઓ ',

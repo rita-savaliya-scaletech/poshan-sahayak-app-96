@@ -40,9 +40,11 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          // Optionally update cache with fresh index.html
           const copy = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
+          // Only cache http(s) requests
+          if (req.url.startsWith('http://') || req.url.startsWith('https://')) {
+            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
+          }
           return res;
         })
         .catch(() => caches.match('/index.html'))
@@ -60,7 +62,10 @@ self.addEventListener('fetch', (event) => {
             // Put a copy in cache for future
             if (networkRes && networkRes.status === 200) {
               const copy = networkRes.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+              // Only cache http(s) requests
+              if (req.url.startsWith('http://') || req.url.startsWith('https://')) {
+                caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+              }
             }
             return networkRes;
           })

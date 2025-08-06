@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, TrendingUp, Users, CheckCircle, XCircle, Clock, Filter, Search } from 'lucide-react';
-import { getChatHistory, type ChatSession } from '@/utils/chatStorage';
+import { getChatHistory } from '@/utils/chatStorage';
+import { ChatSession } from './interface';
 
 const HistoryDashboard = () => {
   const { t } = useTranslation();
@@ -252,7 +253,7 @@ const HistoryDashboard = () => {
                                             {Object.entries(nutrition).map(([nutrient, value], nutrientIdx) => (
                                               <div
                                                 key={nutrientIdx}
-                                                className="flex justify-between items-center text-xs"
+                                                className="flex justify-between items-center text-sm"
                                               >
                                                 <span className="text-muted-foreground capitalize">{nutrient}:</span>
                                                 <span className="font-medium">{String(value)}</span>

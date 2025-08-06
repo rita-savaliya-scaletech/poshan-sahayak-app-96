@@ -143,42 +143,20 @@ export const buildPlaceholdersForCompleted = (t: any, completedMealKey: string |
 };
 
 // Helper to get dynamic greeting
-export const getDynamicGreeting = (t: any) => {
-  const hour = new Date().getHours();
-  if (hour < 12) return t('goodMorning');
-  if (hour < 17) return t('goodAfternoon');
-  return t('goodEvening');
-};
+export const getDynamicGreeting = (t: any, now = new Date()) => {
+  const meal =
+    getMealTypeFromTime(now) ||
+    (() => {
+      const { nextMealKey } = getMealInfo(now);
+      return Object.keys(MEAL_LABELS).find((k) => MEAL_LABELS[k] === nextMealKey) || null;
+    })();
 
-export const askForLocation = (): Promise<string> => {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      resolve('');
-      return;
-    }
+  if (meal === 'breakfast') return t('goodMorning');
+  if (meal === 'lunch') return t('goodAfternoon');
+  if (meal === 'dinner') return t('goodEvening');
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`
-          );
-          const data = await res.json();
-          resolve(
-            data.display_name || `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`
-          );
-        } catch (geocodeError) {
-          console.error('Geocoding error:', geocodeError);
-          resolve(`${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
-        }
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        resolve('');
-      },
-      { enableHighAccuracy: true }
-    );
-  });
+  const h = now.getHours();
+  return h < 12 ? t('goodMorning') : h < 17 ? t('goodAfternoon') : t('goodEvening');
 };
 
 export const isMobile = (): boolean =>
@@ -186,3 +164,42 @@ export const isMobile = (): boolean =>
 
 export const isIOSDevice = (): boolean =>
   /iPhone|iPad|iPod|iPad Simulator|iPhone Simulator|iPod Simulator/i.test(navigator.userAgent);
+
+export const requestCameraPermission = async (): Promise<boolean> => {
+  try {
+    // Try to obtain camera stream (prompts user)
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    stream.getTracks().forEach((t) => t.stop());
+    return true;
+  } catch (err) {
+    console.warn('Camera permission denied or error', err);
+    return false;
+  }
+};
+
+export const requestLocationPermission = async (lang: 'gu' | 'en' = 'en'): Promise<any> => {
+  try {
+    const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+      navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true })
+    );
+
+    // Try reverse geocoding, fall back to coords string
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=${lang}`
+      );
+      const data = await res.json();
+      const name = data?.display_name || `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+      return { granted: true, displayName: name };
+    } catch (err) {
+      console.error('Reverse geocode failed', err);
+      return {
+        granted: true,
+        displayName: `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`,
+      };
+    }
+  } catch (err) {
+    console.warn('Location permission denied or error', err);
+    return { granted: false, displayName: '' };
+  }
+};
