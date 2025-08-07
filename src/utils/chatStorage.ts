@@ -214,17 +214,5 @@ export const getTimestampData = () => {
   };
 };
 
-export const createChatMessage = (
-  id: string,
-  type: ChatMessage['type'],
-  content: ChatMessage['content'],
-  timestamp: Date
-): ChatMessage => ({
-  id,
-  type,
-  content,
-  timestamp,
-});
-
 export const getMealKeyFromType = (mealType: string | null | undefined): string | null =>
   mealType === 'breakfast' ? 'breakfasts' : mealType ?? null;

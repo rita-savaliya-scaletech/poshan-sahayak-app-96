@@ -5,7 +5,6 @@ import { Camera, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   buildPlaceholdersForCompleted,
-  createChatMessage,
   generateSessionId,
   getDynamicGreeting,
   getMealKeyFromType,
@@ -57,7 +56,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   );
   // Location permission — run on mount
   const fetchLocation = async () => {
-    const location = await requestLocationPermission(i18n.language === 'gu' ? 'gu' : 'en');
+    const location = await requestLocationPermission();
     if (location.granted) {
       setLocationName(location.displayName);
     } else {
@@ -85,6 +84,18 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       ? `${t('seeYouTomorrow')}\n${t('tomorrow')} ${t('breakfasts')} ${t('seeYouAgain')}`
       : t('seeYouAtNextMeal', { currentMeal, nextMeal, nextMealTime });
   };
+
+  const createChatMessage = (
+    id: string,
+    type: ChatMessage['type'],
+    content: ChatMessage['content'],
+    timestamp: Date
+  ): ChatMessage => ({
+    id,
+    type,
+    content,
+    timestamp,
+  });
 
   const createAndSetCompletionMessage = (completedMealKey: string | null, session: ChatSession | null = null) => {
     const { timestamp, timestampId, afterLunch, now } = getTimestampData();
@@ -464,8 +475,9 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       {/* WhatsApp-style Header */}
       <div className="bg-primary text-primary-foreground p-4 shadow-lg">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary-foreground/20 rounded-full flex items-center justify-center">
-            <span className="text-lg">🥗</span>
+          {/* Logo - Matching the reference image style */}
+          <div className="w-10 h-10 bg-white rounded-full shadow-xl flex items-center justify-center border-4 border-primary/20">
+            <span className="text-lg">🌱</span>
           </div>
           <div>
             <h1 className="font-semibold">AI Poshan Tracker</h1>
@@ -549,28 +561,27 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
             {message.type === 'menu_card' && (
               <div className="flex justify-start mb-3">
                 <div className="message-bubble-ai rounded-xl p-4 shadow max-w-xs">
-                  <div className="mb-2 font-semibold">
+                  <div className="mb-4 font-semibold">
                     <h4 className="font-semibold mb-2">
                       📋 {t('todaysMenu', { meal: t(getMealKeyFromType(mealType)) })}
                     </h4>
                   </div>
-                  <div className="mb-2 text-sm text-muted-foreground">
+                  <div className="mb-4 text-sm">
                     <p>
-                      <span className="font-bold">{t('date')} :</span>{' '}
-                      <span className="font-medium">{new Date().toLocaleDateString()}</span>
+                      <span className="font-bold">📅 {t('date')} :</span> <span>{new Date().toLocaleDateString()}</span>
                     </p>
                     <p>
-                      <span className="font-bold">{t('mealType')} :</span>{' '}
-                      <span className="font-medium">{t(mealType)}</span>
+                      <span className="font-bold">📍 {t('location')} :</span>{' '}
+                      <span>{locationName || 'Detecting...'}</span>
                     </p>
                     <p>
-                      <span className="font-bold">{t('location')} :</span>{' '}
-                      <span className="font-medium">{locationName || 'Detecting...'}</span>
+                      <span className="font-bold">🍽️ {t('mealType')} :</span> <span>{t(mealType)}</span>
                     </p>
                   </div>
-                  <div className="mb-3">
+                  <div className="">
+                    <p className="mb-1 font-bold">{t('menu')} :</p>
                     {message?.content?.menu.map((item: MenuItem, idx: number) => (
-                      <div key={idx} className="flex items-center text-[16px] mb-1">
+                      <div key={idx} className="flex items-center text-[16px]">
                         <span className="mr-2">{item.emoji}</span>
                         <span>
                           {item.name} - {item.quantity} {t('gram')}

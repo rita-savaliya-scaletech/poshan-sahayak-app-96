@@ -215,7 +215,7 @@ const HistoryDashboard = () => {
                             <div className="bg-background/80 p-3 rounded-lg border border-border/20 mb-2">
                               <p className="text-sm font-semibold text-primary mb-2 flex items-center">
                                 <TrendingUp className="w-4 h-4 mr-1" />
-                                {t('menuDetails')}:
+                                {t('menu')}:
                               </p>
                               <div className="grid gap-2">
                                 {(session.analysisResult as any).menu.map(
