@@ -22,7 +22,7 @@ const ProfileScreen = () => {
 
   const getUserDetails = async () => {
     setLoading(true);
-    const response = await HttpService.get(`${API_CONFIG.getUserData}/${userInfo.id}?lang=${i18n.language}`);
+    const response = await HttpService.get(`${API_CONFIG.getUserData}/${userInfo.id || ''}?lang=${i18n.language}`);
     setUserDetails(response);
     setLoading(false);
   };

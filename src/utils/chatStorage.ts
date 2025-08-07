@@ -1,4 +1,4 @@
-import { ChatSession } from '@/components/interface';
+import { ChatMessage, ChatSession } from '@/components/interface';
 
 const STORAGE_KEY = 'poshan_chat_history';
 
@@ -203,3 +203,28 @@ export const requestLocationPermission = async (lang: 'gu' | 'en' = 'en'): Promi
     return { granted: false, displayName: '' };
   }
 };
+
+export const getTimestampData = () => {
+  const now = new Date();
+  return {
+    now,
+    timestamp: now,
+    timestampId: Date.now(),
+    afterLunch: now.getHours() * 60 + now.getMinutes() > 810,
+  };
+};
+
+export const createChatMessage = (
+  id: string,
+  type: ChatMessage['type'],
+  content: ChatMessage['content'],
+  timestamp: Date
+): ChatMessage => ({
+  id,
+  type,
+  content,
+  timestamp,
+});
+
+export const getMealKeyFromType = (mealType: string | null | undefined): string | null =>
+  mealType === 'breakfast' ? 'breakfasts' : mealType ?? null;
