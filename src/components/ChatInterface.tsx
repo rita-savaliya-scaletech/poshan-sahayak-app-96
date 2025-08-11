@@ -45,15 +45,15 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const [imageUploaded, setImageUploaded] = useState(false);
   const [activeUploadButton, setActiveUploadButton] = useState<'main' | 'recapture' | null>(null);
 
-  const todaysMenu = useMemo<MenuItem[]>(
-    () =>
-      weeklyMenu[todayKey].map((item) => ({
-        name: t(item.name[i18n.language]), // switch to .gu for Gujarati
-        quantity: item.quantity,
-        emoji: item.emoji,
-      })),
-    [t, todayKey]
-  );
+const todaysMenu = useMemo<MenuItem[]>(
+  () =>
+    weeklyMenu[todayKey][mealType].map((item) => ({
+      name: t(item.name[i18n.language as 'en' | 'gu']), // switch to Gujarati if needed
+      quantity: item.quantity,
+      emoji: item.emoji,
+    })),
+  [t, todayKey, mealType, i18n.language]
+);
   // Location permission — run on mount
   const fetchLocation = async () => {
     const location = await requestLocationPermission();
@@ -81,7 +81,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
     nextMealTime: string
   ): string => {
     return afterLunch
-      ? `${t('seeYouTomorrow')}\n${t('tomorrow')} ${t('breakfasts')} ${t('seeYouAgain')}`
+      ? `${t('seeYouTomorrow')}\n${t('tomorrow')} ${t('breakfasts')} (${nextMealTime}) ${t('seeYouAgain')}`
       : t('seeYouAtNextMeal', { currentMeal, nextMeal, nextMealTime });
   };
 
