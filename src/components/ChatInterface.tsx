@@ -46,15 +46,22 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
   const [activeUploadButton, setActiveUploadButton] = useState<'main' | 'recapture' | null>(null);
 
 const todaysMenu = useMemo<MenuItem[]>(
-  () =>
-    weeklyMenu[todayKey][mealType].map((item) => ({
-      name: t(item.name[i18n.language as 'en' | 'gu']), // switch to Gujarati if needed
+  () => {
+    const key = todayKey.toLowerCase();
+    // Get menu for mealType, fallback to breakfast if not found
+    const menuArr =
+      weeklyMenu[key]?.[mealType] && Array.isArray(weeklyMenu[key][mealType])
+        ? weeklyMenu[key][mealType]
+        : weeklyMenu[key]?.['breakfast'] || [];
+    return menuArr.map((item) => ({
+      name: t(item.name[i18n.language as 'en' | 'gu']),
       quantity: item.quantity,
       emoji: item.emoji,
-    })),
+    }));
+  },
   [t, todayKey, mealType, i18n.language]
 );
-  // Location permission — run on mount
+
   const fetchLocation = async () => {
     const location = await requestLocationPermission();
     if (location.granted) {
@@ -109,15 +116,25 @@ const todaysMenu = useMemo<MenuItem[]>(
 
   // Simulate conversation on load
   useEffect(() => {
-    const { timestamp, timestampId, now } = getTimestampData();
+    const { timestamp, timestampId, now, afterLunch } = getTimestampData();
 
-    // 🔹 Case 1: No meal selected — show next/tomorrow message
+    // If no mealType (outside breakfast/lunch slot), show tomorrow breakfast completion message
     if (!mealType) {
       createAndSetCompletionMessage(null, null);
       return;
     }
 
-    // 🔹 Case 2: Existing completed session
+    // If after lunch time and no completed breakfast/lunch session, show tomorrow breakfast completion message
+    if (
+      afterLunch &&
+      !getSessionForMealToday('breakfast') &&
+      !getSessionForMealToday('lunch')
+    ) {
+      createAndSetCompletionMessage('lunch', null); // This will show tomorrow breakfast message
+      return;
+    }
+
+    // Existing completed session
     const existingSession = getSessionForMealToday(mealType);
     if (existingSession?.status === 'completed') {
       const completedMealKey = getMealKeyFromType(existingSession.mealType);
@@ -125,7 +142,7 @@ const todaysMenu = useMemo<MenuItem[]>(
       return;
     }
 
-    // 🔹 Case 3: No session or session is not completed — start normal flow
+    // No session or session is not completed — start normal flow
     const sessionId = generateSessionId();
 
     const greeting = createChatMessage(
@@ -532,8 +549,7 @@ const todaysMenu = useMemo<MenuItem[]>(
                     <img
                       src={message?.content?.image}
                       alt="Food upload"
-                      className="w-48 h-36 object-cover rounded-lg mb-2"
-                    />
+                      className="w-48 h-36 object-cover rounded-lg mb-2" />
                     <p className="text-xs opacity-75">📸</p>
                     <div className="flex items-center justify-end mt-1 space-x-1">
                       <span className="text-xs opacity-75">
@@ -591,9 +607,9 @@ const todaysMenu = useMemo<MenuItem[]>(
                   <div className="text-right text-xs text-gray-400 mt-1">
                     {message?.content?.time
                       ? new Date(message?.content?.time).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
                       : ''}
                   </div>
                 </div>
@@ -755,11 +771,9 @@ const todaysMenu = useMemo<MenuItem[]>(
                           size="sm"
                           variant="outline"
                           disabled={isAnswered}
-                          className={`flex-1 flex items-center justify-start gap-1 px-2 py-1 ${
-                            isAnswered
-                              ? 'opacity-50 cursor-not-allowed bg-muted'
-                              : 'bg-background/80 hover:bg-primary hover:text-primary-foreground'
-                          }`}
+                          className={`flex-1 flex items-center justify-start gap-1 px-2 py-1 ${isAnswered
+                            ? 'opacity-50 cursor-not-allowed bg-muted'
+                            : 'bg-background/80 hover:bg-primary hover:text-primary-foreground'}`}
                           onClick={() => handleFeedbackAnswer(message?.content?.questionKey, option)}
                         >
                           {option.icon && <span>{option.icon}</span>}

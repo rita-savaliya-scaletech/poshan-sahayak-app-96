@@ -94,12 +94,13 @@ export const generateSessionId = (): string => {
 const toMinutes = (date: Date) => date.getHours() * 60 + date.getMinutes();
 export const getMealTypeFromTime = (now = new Date()): keyof typeof MEAL_LABELS | null => {
   const mins = toMinutes(now);
-  const { BREAKFAST_START, LUNCH_START, DINNER_START } = MEAL_TIMES;
+  const { BREAKFAST_START, LUNCH_START, LUNCH_END, DINNER_START } = MEAL_TIMES;
 
   if (mins >= BREAKFAST_START && mins < LUNCH_START) return 'breakfast';
-  if (mins >= LUNCH_START && mins < DINNER_START) return 'lunch';
-  return null;
-};
+  if (mins >= LUNCH_START && mins <= LUNCH_END) return 'lunch';
+  // After lunch time or at/after dinner start, return breakfast (next day)
+  if (mins > LUNCH_END || mins >= BREAKFAST_START) return 'breakfast';
+}
 
 export const getMealInfo = (now = new Date()) => {
   const mins = toMinutes(now);
@@ -209,7 +210,7 @@ export const getTimestampData = () => {
     now,
     timestamp: now,
     timestampId: Date.now(),
-    afterLunch: now.getHours() * 60 + now.getMinutes() > 810,
+    afterLunch: now.getHours() * 60 + now.getMinutes() > MEAL_TIMES.LUNCH_END,
   };
 };
 
