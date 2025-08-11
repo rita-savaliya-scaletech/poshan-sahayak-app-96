@@ -13,7 +13,6 @@ const MEAL_TIMES = {
 const MEAL_LABELS = {
   breakfast: 'breakfasts',
   lunch: 'lunch',
-  dinner: 'dinners',
 };
 
 export const saveChatSession = (session: ChatSession): void => {
@@ -99,7 +98,7 @@ export const getMealTypeFromTime = (now = new Date()): keyof typeof MEAL_LABELS 
 
   if (mins >= BREAKFAST_START && mins < LUNCH_START) return 'breakfast';
   if (mins >= LUNCH_START && mins < DINNER_START) return 'lunch';
-  return 'dinner';
+  return null;
 };
 
 export const getMealInfo = (now = new Date()) => {

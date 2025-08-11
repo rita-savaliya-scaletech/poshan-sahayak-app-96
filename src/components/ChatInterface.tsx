@@ -232,8 +232,7 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
       // Check if the result has valid data
       const hasValidData =
         result &&
-        ((result.found_items && result.found_items.length > 0) ||
-          (result.items_food && result.items_food.length > 0) ||
+        ((result.items_food && result.items_food.length > 0) ||
           (result.nutritions && Object.keys(result.nutritions).length > 0));
 
       if (!hasValidData) {
@@ -666,13 +665,13 @@ const ChatInterface = ({ onNavigateToHistory }: ChatInterfaceProps) => {
               <div className="flex justify-start mb-3">
                 <div className="message-bubble-ai max-w-[85%]">
                   <div className="space-y-3">
-                    {message?.content?.found_items.length > 0 ? (
+                    {message?.content?.items_food.length > 0 ? (
                       <>
                         <p className="font-semibold text-success">✅ {t('analysisComplete')}!</p>
                         <div className="bg-success/10 p-3 rounded-lg">
                           <p className="text-sm font-medium text-success mb-2">{t('itemsFound')}:</p>
                           <div className="flex flex-wrap gap-1">
-                            {message?.content?.found_items?.map((item: string, idx: number) => (
+                            {message?.content?.items_food?.map((item: string, idx: number) => (
                               <span key={idx} className="bg-success text-white text-xs px-2 py-1 rounded-full">
                                 {item}
                               </span>

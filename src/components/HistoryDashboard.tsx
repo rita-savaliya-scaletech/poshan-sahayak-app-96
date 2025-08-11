@@ -269,14 +269,14 @@ const HistoryDashboard = () => {
                             )}
 
                           {/* Found Items */}
-                          {(session.analysisResult as any)?.found_items?.length > 0 && (
+                          {(session.analysisResult as any)?.items_food?.length > 0 && (
                             <div className="bg-success/5 p-3 rounded-lg border border-success/20 mb-2">
                               <p className="text-sm font-semibold text-success mb-2 flex items-center">
                                 <CheckCircle className="w-4 h-4 mr-1" />
                                 {t('foundFromMenu')}:
                               </p>
                               <div className="flex flex-wrap gap-1">
-                                {(session.analysisResult as any).found_items.map((item: string, idx: number) => (
+                                {(session.analysisResult as any).items_food.map((item: string, idx: number) => (
                                   <span
                                     key={idx}
                                     className="bg-success/20 text-success text-xs px-2 py-1 rounded-full border border-success/30"
