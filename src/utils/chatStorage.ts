@@ -3,11 +3,10 @@ import { ChatMessage, ChatSession } from '@/components/interface';
 const STORAGE_KEY = 'poshan_chat_history';
 
 const MEAL_TIMES = {
-  BREAKFAST_START: 510, // 8:30
-  BREAKFAST_END: 570, // 9:30
-  LUNCH_START: 750, // 12:30
-  LUNCH_END: 810, // 13:30
-  DINNER_START: 960, // 4:00 PM
+  BREAKFAST_START: 510, // 8:30 AM
+  BREAKFAST_END: 690,   // 11:30 AM
+  LUNCH_START: 690,     // 11:30 AM
+  LUNCH_END: 1260,      // 9:00 PM
 };
 
 const MEAL_LABELS = {
@@ -94,7 +93,7 @@ export const generateSessionId = (): string => {
 const toMinutes = (date: Date) => date.getHours() * 60 + date.getMinutes();
 export const getMealTypeFromTime = (now = new Date()): keyof typeof MEAL_LABELS | null => {
   const mins = toMinutes(now);
-  const { BREAKFAST_START, LUNCH_START, LUNCH_END, DINNER_START } = MEAL_TIMES;
+  const { BREAKFAST_START, LUNCH_START, LUNCH_END } = MEAL_TIMES;
 
   if (mins >= BREAKFAST_START && mins < LUNCH_START) return 'breakfast';
   if (mins >= LUNCH_START && mins <= LUNCH_END) return 'lunch';
